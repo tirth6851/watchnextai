@@ -18,7 +18,7 @@ def home():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}&page=1"
     response = requests.get(url).json()
     movies = response.get("results", [])
-    return render_template("index.html", movies=movies, TMDB_API_KEY=TMDB_API_KEY)
+    return render_template("index.html", movies=movies)
 
 
 # Movie Details Page
