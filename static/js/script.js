@@ -1,6 +1,9 @@
 let page = 1; // Pagination
+let isSearching = false; // Track if search results are displayed
 const container = document.getElementById("movie-container");
 const loading = document.getElementById("loading");
+const searchForm = document.getElementById("search-form");
+const searchInput = searchForm ? searchForm.querySelector("input") : null;
 
 // Animate cards when visible and scale center card
 function animateCards() {
@@ -24,6 +27,7 @@ function animateCards() {
 
 // Infinite scroll loading
 async function loadMoreMovies() {
+  if (isSearching) return;
   loading.style.display = "block";
   page++;
   const response = await fetch(`/load_more?page=${page}`);
@@ -56,6 +60,37 @@ window.addEventListener("scroll", () => {
     loadMoreMovies();
   }
 });
+
+// Search handling
+if (searchForm) {
+  searchForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const query = searchInput.value.trim();
+    if (!query) return;
+    page = 1;
+    isSearching = true;
+    loading.style.display = "block";
+    const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    container.innerHTML = "";
+    data.movies.forEach(movie => {
+      const card = document.createElement("div");
+      card.className = "movie-card";
+      card.innerHTML = `
+        <a href="/movie/${movie.id}">
+          <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
+        </a>
+        <div class="movie-info">
+          <h3>${movie.title}</h3>
+          <p>⭐ ${movie.vote_average}</p>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    loading.style.display = "none";
+    animateCards();
+  });
+}
 
 // Initial animation
 animateCards();

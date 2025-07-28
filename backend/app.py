@@ -49,6 +49,21 @@ def load_more():
     return {"movies": response.get("results", [])}
 
 
+# Search Movies Route
+@app.route("/search")
+def search():
+    query = request.args.get("query", "")
+    if not query:
+        return {"movies": []}
+
+    url = (
+        f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}"
+        f"&query={requests.utils.quote(query)}"
+    )
+    response = requests.get(url).json()
+    return {"movies": response.get("results", [])}
+
+
 # Run the app
 if __name__ == "__main__":
     app.run(debug=True)
