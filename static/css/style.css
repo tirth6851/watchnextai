@@ -125,3 +125,16 @@ main {
   padding: 20px;
   display: none;
 }
+
+/* Recommendations */
+.recommendations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.recommendations .movie-card {
+  width: 150px;
+}

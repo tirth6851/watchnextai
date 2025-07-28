@@ -32,6 +32,18 @@
     {% else %}
       <p>No reviews available.</p>
     {% endif %}
+
+    <h2>Recommended Movies</h2>
+    <div class="recommendations">
+      {% for rec in recommendations %}
+        <div class="movie-card">
+          <a href="/movie/{{ rec.id }}">
+            <img src="https://image.tmdb.org/t/p/w200{{ rec.poster_path }}" alt="{{ rec.title }}">
+          </a>
+          <p>{{ rec.title }}</p>
+        </div>
+      {% endfor %}
+    </div>
   </main>
 </body>
 </html>
