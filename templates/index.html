@@ -17,10 +17,10 @@
       <li><a href="#">Series</a></li>
       <li><a href="#">Regions</a></li>
     </ul>
-    <div class="search-box">
+    <form id="search-form" class="search-box">
       <input type="text" placeholder="Search movies, shows..." />
-      <button>🔍</button>
-    </div>
+      <button type="submit">🔍</button>
+    </form>
   </nav>
 
   <!-- Main Section -->
@@ -42,9 +42,6 @@
     <div id="loading" class="loading">Loading more movies...</div>
   </main>
 
-  <script>
-    const TMDB_API_KEY = "{{ TMDB_API_KEY }}"; // Passed from Flask
-  </script>
   <script src="/static/js/script.js"></script>
 </body>
 </html>

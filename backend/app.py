@@ -18,7 +18,7 @@ def home():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}&page=1"
     response = requests.get(url).json()
     movies = response.get("results", [])
-    return render_template("index.html", movies=movies, TMDB_API_KEY=TMDB_API_KEY)
+    return render_template("index.html", movies=movies)
 
 
 # Movie Details Page
@@ -45,6 +45,21 @@ def movie_details(movie_id):
 def load_more():
     page = request.args.get("page", 1)
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}&page={page}"
+    response = requests.get(url).json()
+    return {"movies": response.get("results", [])}
+
+
+# Search Movies Route
+@app.route("/search")
+def search():
+    query = request.args.get("query", "")
+    if not query:
+        return {"movies": []}
+
+    url = (
+        f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}"
+        f"&query={requests.utils.quote(query)}"
+    )
     response = requests.get(url).json()
     return {"movies": response.get("results", [])}
 
