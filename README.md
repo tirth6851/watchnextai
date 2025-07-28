@@ -1,45 +1,33 @@
 # WatchNextAI 🎬
 
-**WatchNextAI** is a Python-based movie recommendation website that not only suggests movies based on your preferences but also provides **comprehensive details about each movie**, including trailers, reviews, ratings, and streaming links. It covers **all regional movie industries** (Hollywood, Bollywood, Tollywood, etc.) and shows available **subtitles and dubbing languages** (e.g., Hindi, Telugu, Punjabi).
+WatchNextAI is a lightweight Flask application that displays trending movies from the TMDb API. It includes a minimal recommendation component and showcases movie details such as trailers, ratings and reviews.
 
----
+## Project Structure
 
-## 🌟 Key Features
-- **Personalized Recommendations** – Learns from user ratings and movie history.
-- **Multi-Industry Support** – Suggests movies from Hollywood, Bollywood, Tollywood, and other regional industries.
-- **Sub/Dub Availability** – Displays language options like Hindi, Telugu, Tamil, Punjabi, and English.
-- **Movie Details Page** – When you click a movie poster, you see:
-  - Official trailer (YouTube integration).
-  - Ratings (from TMDb/IMDb).
-  - Reviews and user feedback.
-  - Links to legal streaming platforms.
-- **Watchlist & Favorites** – Save your favorite movies.
-- **Trending Movies** – Shows popular movies and updates daily.
+- `backend/` – Flask server and placeholder recommendation logic
+- `static/` – Front end CSS and JavaScript
+- `templates/` – HTML templates
+- `requirements.txt` – Python dependencies
 
----
+## Features
 
-## 🛠 Tech Stack
-**Backend:**
-- Python (Flask)
-- TMDb API (for global + regional movies)
-- Pandas, NumPy for handling data
-- SQLite for storing user ratings/preferences
+- Trending movie list with infinite scroll
+- Individual movie pages with trailer, rating and reviews
+- Simple recommendation logic for future personalization
+- Responsive UI built with HTML, CSS and JavaScript
 
-**Frontend:**
-- HTML, CSS, JavaScript (with Bootstrap/Tailwind)
-- Jinja2 (Flask templating)
-- Responsive UI for mobile & desktop
+## Installation
 
-**External Services:**
-- **TMDb API** – Movie data (trailers, posters, ratings).
-- **YouTube API** – For movie trailers.
-- **Streaming Links API** – (optional, can be static or user-added links).
-
----
-
-## 📦 Installation
-
-### **1. Clone the Repository**
 ```bash
 git clone https://github.com/yourusername/watchnextai.git
 cd watchnextai
+cp .env.example .env  # add your TMDB_API_KEY
+pip install -r requirements.txt
+python backend/app.py
+```
+
+Visit `http://127.0.0.1:5000` to view the site.
+
+## AI Model
+
+WatchNextAI currently uses basic trending data from TMDb. A small collaborative filtering model is planned for personalized recommendations but is limited by the available dataset and is not yet fully featured.
