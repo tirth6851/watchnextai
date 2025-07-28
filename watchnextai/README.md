@@ -1,0 +1,3 @@
+# WatchNextAI
+
+Starter project structure.
