@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ movie.title }} - WatchNextAI</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>{{ movie.title }}</h1>
+    <p>⭐ Rating: {{ movie.vote_average }}</p>
+  </header>
+
+  <main>
+    {% if trailer_key %}
+      <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ trailer_key }}" frameborder="0" allowfullscreen></iframe>
+    {% else %}
+      <p>No trailer available.</p>
+    {% endif %}
+
+    <h2>Overview</h2>
+    <p>{{ movie.overview }}</p>
+
+    <h2>Reviews</h2>
+    {% if movie.reviews.results %}
+      <ul>
+        {% for review in movie.reviews.results %}
+          <li><strong>{{ review.author }}:</strong> {{ review.content }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No reviews available.</p>
+    {% endif %}
+  </main>
+</body>
+</html>
