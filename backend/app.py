@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 import requests
 import os
 from dotenv import load_dotenv
+from recommender import Recommender
 
 # Load environment variables
 load_dotenv()
@@ -10,6 +11,9 @@ app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
 # TMDB API Key
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
+# Instantiate the recommender at startup
+recommender = Recommender(TMDB_API_KEY)
 
 
 # Home Route - Trending Movies
@@ -37,7 +41,15 @@ def movie_details(movie_id):
             trailer_key = video["key"]
             break
 
-    return render_template("movie.html", movie=movie_data, trailer_key=trailer_key)
+    # Get recommended movies
+    recommended = recommender.get_recommendations(movie_id)
+
+    return render_template(
+        "movie.html",
+        movie=movie_data,
+        trailer_key=trailer_key,
+        recommendations=recommended,
+    )
 
 
 # Infinite Scroll - Load More Movies

@@ -32,6 +32,22 @@
     {% else %}
       <p>No reviews available.</p>
     {% endif %}
+
+    {% if recommendations %}
+      <h2>You May Also Like</h2>
+      <div class="movie-carousel">
+        {% for rec in recommendations %}
+          <div class="movie-card">
+            <a href="/movie/{{ rec.id }}">
+              <img src="https://image.tmdb.org/t/p/w300{{ rec.poster_path }}" alt="{{ rec.title }}">
+            </a>
+            <div class="movie-info">
+              <h3>{{ rec.title }}</h3>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
   </main>
 </body>
 </html>
