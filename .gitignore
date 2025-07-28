@@ -1,0 +1,19 @@
+# Ignore environment variables
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment folders
+venv/
+env/
+
+# VS Code settings
+.vscode/
+
+# Other OS junk files
+.DS_Store
+Thumbs.db
