@@ -1,33 +1,39 @@
 # WatchNextAI 🎬
 
-**WatchNextAI** is a free, Python-based movie recommendation website that learns user preferences and suggests movies tailored to their taste. It uses algorithms like content-based filtering to recommend movies and integrates with the free [TMDb API](https://www.themoviedb.org/documentation/api) for movie data.
+**WatchNextAI** is a Python-based movie recommendation website that not only suggests movies based on your preferences but also provides **comprehensive details about each movie**, including trailers, reviews, ratings, and streaming links. It covers **all regional movie industries** (Hollywood, Bollywood, Tollywood, etc.) and shows available **subtitles and dubbing languages** (e.g., Hindi, Telugu, Punjabi).
 
 ---
 
-## 🚀 Features
-- **Personalized Recommendations** – Learns from user ratings and preferences.
-- **Content-Based Filtering** – Suggests movies based on genres and similarities.
-- **Free & Open Source** – Built entirely using free tools and APIs.
-- **Trending Movies Section** – Displays popular and trending movies from TMDb.
-- **Watchlist** – Save movies to view later.
+## 🌟 Key Features
+- **Personalized Recommendations** – Learns from user ratings and movie history.
+- **Multi-Industry Support** – Suggests movies from Hollywood, Bollywood, Tollywood, and other regional industries.
+- **Sub/Dub Availability** – Displays language options like Hindi, Telugu, Tamil, Punjabi, and English.
+- **Movie Details Page** – When you click a movie poster, you see:
+  - Official trailer (YouTube integration).
+  - Ratings (from TMDb/IMDb).
+  - Reviews and user feedback.
+  - Links to legal streaming platforms.
+- **Watchlist & Favorites** – Save your favorite movies.
+- **Trending Movies** – Shows popular movies and updates daily.
 
 ---
 
 ## 🛠 Tech Stack
 **Backend:**
 - Python (Flask)
-- Pandas, NumPy (for data handling)
-- Requests (for TMDb API calls)
+- TMDb API (for global + regional movies)
+- Pandas, NumPy for handling data
+- SQLite for storing user ratings/preferences
 
 **Frontend:**
-- HTML, CSS, JavaScript
-- Bootstrap (for styling)
+- HTML, CSS, JavaScript (with Bootstrap/Tailwind)
+- Jinja2 (Flask templating)
+- Responsive UI for mobile & desktop
 
-**Database:**
-- SQLite (lightweight and free)
-
-**APIs:**
-- [TMDb API](https://www.themoviedb.org/documentation/api) – for movie details and posters.
+**External Services:**
+- **TMDb API** – Movie data (trailers, posters, ratings).
+- **YouTube API** – For movie trailers.
+- **Streaming Links API** – (optional, can be static or user-added links).
 
 ---
 
@@ -37,4 +43,3 @@
 ```bash
 git clone https://github.com/yourusername/watchnextai.git
 cd watchnextai
-
