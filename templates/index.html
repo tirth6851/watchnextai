@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WatchNextAI - Home</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo">🎬 WatchNextAI</div>
+    <ul class="nav-links">
+      <li><a href="#">Movies</a></li>
+      <li><a href="#">TV Shows</a></li>
+      <li><a href="#">Live Shows</a></li>
+      <li><a href="#">Series</a></li>
+      <li><a href="#">Regions</a></li>
+    </ul>
+    <div class="search-box">
+      <input type="text" placeholder="Search movies, shows..." />
+      <button>🔍</button>
+    </div>
+  </nav>
+
+  <!-- Main Section -->
+  <main>
+    <h2 class="section-title">🔥 Trending Movies</h2>
+    <div class="movie-carousel">
+      {% for movie in movies %}
+        <div class="movie-card">
+          <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+          <div class="movie-info">
+            <h3>{{ movie.title }}</h3>
+            <p>⭐ {{ movie.vote_average }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </main>
+
+  <script src="/static/js/script.js"></script>
+</body>
+</html>
