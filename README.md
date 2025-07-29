@@ -28,6 +28,15 @@ python backend/app.py
 
 Visit `http://127.0.0.1:5000` to view the site.
 
+## Running Tests
+
+Install the dependencies and execute `pytest` from the repository root:
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
 ## AI Model
 
 WatchNextAI currently uses basic trending data from TMDb. A small collaborative filtering model is planned for personalized recommendations but is limited by the available dataset and is not yet fully featured.
