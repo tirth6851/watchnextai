@@ -3,3 +3,4 @@ requests
 python-dotenv
 sentence-transformers
 scikit-learn
+pytest
