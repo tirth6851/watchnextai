@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 import requests
 import os
 from dotenv import load_dotenv
-from recommender import Recommender
+from recommender import MovieRecommender
 
 # Load environment variables
 load_dotenv()
@@ -13,7 +13,7 @@ app = Flask(__name__, template_folder="../templates", static_folder="../static")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 
 # Instantiate the recommender at startup
-recommender = Recommender(TMDB_API_KEY)
+recommender = MovieRecommender(TMDB_API_KEY)
 
 
 # Home Route - Trending Movies
