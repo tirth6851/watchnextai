@@ -5,6 +5,37 @@ const loading = document.getElementById("loading");
 const searchForm = document.getElementById("search-form");
 const searchInput = searchForm ? searchForm.querySelector("input") : null;
 
+function appendMovies(movies, clear = false) {
+  if (clear) container.innerHTML = "";
+  movies.forEach(movie => {
+    const card = document.createElement("div");
+    card.className = "movie-card";
+    card.innerHTML = `
+      <a href="/movie/${movie.id}">
+        <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
+      </a>
+      <div class="movie-info">
+        <h3>${movie.title}</h3>
+        <p>⭐ ${movie.vote_average}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function loadTrending(reset = false) {
+  if (reset) {
+    page = 1;
+    container.innerHTML = "";
+  }
+  loading.style.display = "block";
+  const response = await fetch(`/load_more?page=${page}`);
+  const data = await response.json();
+  appendMovies(data.movies);
+  loading.style.display = "none";
+  animateCards();
+}
+
 // Animate cards when visible and scale center card
 function animateCards() {
   const cards = document.querySelectorAll(".movie-card");
@@ -32,22 +63,7 @@ async function loadMoreMovies() {
   page++;
   const response = await fetch(`/load_more?page=${page}`);
   const data = await response.json();
-
-  data.movies.forEach(movie => {
-    const card = document.createElement("div");
-    card.className = "movie-card";
-    card.innerHTML = `
-      <a href="/movie/${movie.id}">
-        <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
-      </a>
-      <div class="movie-info">
-        <h3>${movie.title}</h3>
-        <p>⭐ ${movie.vote_average}</p>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-
+  appendMovies(data.movies);
   loading.style.display = "none";
   animateCards();
 }
@@ -66,27 +82,19 @@ if (searchForm) {
   searchForm.addEventListener("submit", async e => {
     e.preventDefault();
     const query = searchInput.value.trim();
-    if (!query) return;
+    if (!query) {
+      if (isSearching) {
+        isSearching = false;
+        await loadTrending(true);
+      }
+      return;
+    }
     page = 1;
     isSearching = true;
     loading.style.display = "block";
     const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
     const data = await response.json();
-    container.innerHTML = "";
-    data.movies.forEach(movie => {
-      const card = document.createElement("div");
-      card.className = "movie-card";
-      card.innerHTML = `
-        <a href="/movie/${movie.id}">
-          <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
-        </a>
-        <div class="movie-info">
-          <h3>${movie.title}</h3>
-          <p>⭐ ${movie.vote_average}</p>
-        </div>
-      `;
-      container.appendChild(card);
-    });
+    appendMovies(data.movies, true);
     loading.style.display = "none";
     animateCards();
   });
