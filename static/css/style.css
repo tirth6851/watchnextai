@@ -125,3 +125,9 @@ main {
   padding: 20px;
   display: none;
 }
+
+/* Error messages */
+.error {
+  color: red;
+  margin: 10px 0;
+}

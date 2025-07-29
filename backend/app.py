@@ -20,9 +20,16 @@ recommender = Recommender(TMDB_API_KEY)
 @app.route("/")
 def home():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}&page=1"
-    response = requests.get(url).json()
-    movies = response.get("results", [])
-    return render_template("index.html", movies=movies)
+    movies = []
+    error = None
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        movies = response.json().get("results", [])
+    except Exception as e:
+        app.logger.error("Failed to fetch trending movies: %s", e)
+        error = "Unable to load movies right now."
+    return render_template("index.html", movies=movies, error=error)
 
 
 # Movie Details Page
@@ -32,7 +39,15 @@ def movie_details(movie_id):
         f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}"
         "&append_to_response=videos,reviews"
     )
-    movie_data = requests.get(movie_url).json()
+    movie_data = {}
+    error = None
+    try:
+        response = requests.get(movie_url)
+        response.raise_for_status()
+        movie_data = response.json()
+    except Exception as e:
+        app.logger.error("Failed to fetch movie %s: %s", movie_id, e)
+        error = "Unable to load movie details."
 
     # Extract trailer key from videos
     trailer_key = None
@@ -49,6 +64,7 @@ def movie_details(movie_id):
         movie=movie_data,
         trailer_key=trailer_key,
         recommendations=recommended,
+        error=error,
     )
 
 
@@ -57,8 +73,15 @@ def movie_details(movie_id):
 def load_more():
     page = request.args.get("page", 1)
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}&page={page}"
-    response = requests.get(url).json()
-    return {"movies": response.get("results", [])}
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        movies = data.get("results", [])
+    except Exception as e:
+        app.logger.error("Failed to load more movies: %s", e)
+        movies = []
+    return {"movies": movies}
 
 
 # Search Movies Route
@@ -72,8 +95,15 @@ def search():
         f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}"
         f"&query={requests.utils.quote(query)}"
     )
-    response = requests.get(url).json()
-    return {"movies": response.get("results", [])}
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        movies = data.get("results", [])
+    except Exception as e:
+        app.logger.error("Search failed for query '%s': %s", query, e)
+        movies = []
+    return {"movies": movies}
 
 
 # Run the app

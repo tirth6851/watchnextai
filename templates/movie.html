@@ -13,6 +13,9 @@
   </header>
 
   <main>
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
     {% if trailer_key %}
       <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ trailer_key }}" frameborder="0" allowfullscreen></iframe>
     {% else %}

@@ -26,6 +26,9 @@
   <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
     <div id="movie-container" class="movie-carousel">
       {% for movie in movies %}
         <div class="movie-card">
