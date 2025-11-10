@@ -1,45 +1,73 @@
 # WatchNextAI 🎬
 
-**WatchNextAI** is a Python-based movie recommendation website that not only suggests movies based on your preferences but also provides **comprehensive details about each movie**, including trailers, reviews, ratings, and streaming links. It covers **all regional movie industries** (Hollywood, Bollywood, Tollywood, etc.) and shows available **subtitles and dubbing languages** (e.g., Hindi, Telugu, Punjabi).
+> An intelligent movie recommendation web app powered by Python and machine learning, supporting Hollywood, Bollywood, and beyond.
 
 ---
 
 ## 🌟 Key Features
-- **Personalized Recommendations** – Learns from user ratings and movie history.
-- **Multi-Industry Support** – Suggests movies from Hollywood, Bollywood, Tollywood, and other regional industries.
-- **Sub/Dub Availability** – Displays language options like Hindi, Telugu, Tamil, Punjabi, and English.
-- **Movie Details Page** – When you click a movie poster, you see:
-  - Official trailer (YouTube integration).
-  - Ratings (from TMDb/IMDb).
-  - Reviews and user feedback.
-  - Links to legal streaming platforms.
-- **Watchlist & Favorites** – Save your favorite movies.
-- **Trending Movies** – Shows popular movies and updates daily.
+- **Personalized Recommendations:** Adapts to user ratings and preferences
+- **Multi-Industry Coverage:** Hollywood, Bollywood, Tollywood, and regional movies
+- **Sub/Dub Language Support:** Hindi, Telugu, Tamil, Punjabi, English
+- **Movie Details:** See trailers, ratings, reviews, and streaming links for every movie
+- **Trending and Popular:** Dynamic trending movie lists updated daily
+- **Watchlist/Favorites:** Save movies you want to watch or loved
 
 ---
 
 ## 🛠 Tech Stack
-**Backend:**
-- Python (Flask)
-- TMDb API (for global + regional movies)
-- Pandas, NumPy for handling data
-- SQLite for storing user ratings/preferences
-
-**Frontend:**
-- HTML, CSS, JavaScript (with Bootstrap/Tailwind)
-- Jinja2 (Flask templating)
-- Responsive UI for mobile & desktop
-
-**External Services:**
-- **TMDb API** – Movie data (trailers, posters, ratings).
-- **YouTube API** – For movie trailers.
-- **Streaming Links API** – (optional, can be static or user-added links).
+- **Backend:** Python (Flask), Pandas, NumPy, SQLite
+- **Frontend:** HTML, CSS, JavaScript (Bootstrap, Tailwind), Jinja2
+- **APIs:** TMDb, YouTube
+- **Dev Tools:** Git, GitHub
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Getting Started
+1. **Clone repo**
+   ```bash
+   git clone https://github.com/tirth6851/watchnextai.git
+   cd watchnextai
+   ```
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Set up TMDb/YouTube API keys**
+   - Add API keys to `.env` file
+4. **Run the Flask App**
+   ```bash
+   flask run
+   ```
 
-### **1. Clone the Repository**
-```bash
-git clone https://github.com/yourusername/watchnextai.git
-cd watchnextai
+---
+
+## 🚀 Demo
+See latest version running at [watchnextai-orpin.vercel.app](https://watchnextai-orpin.vercel.app)
+
+---
+
+## 🧠 Machine Learning
+- Content-based and collaborative filtering for personalized movie suggestions
+- Data pipelines for real-time trending movies
+- User behavior analytics (in development)
+
+---
+
+## 📚 Learning Highlights
+- Built RESTful APIs for movie data aggregation
+- Implemented responsive UI with Flask templating
+- Learned user-centric recommendation strategies
+
+---
+
+## 👨‍💻 About Me
+I'm Tirth Patel, a CS student passionate about AI, Python, and media technology.
+- [GitHub Profile](https://github.com/tirth6851)
+- [LinkedIn](https://www.linkedin.com/in/tirth-patel-949197346/)
+
+---
+
+## 📝 License
+This project is licensed under MIT. See [LICENSE](https://github.com/tirth6851/watchnextai/blob/main/LICENSE).
+
+**Last updated: November 2025**
