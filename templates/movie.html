@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ movie.title }} - WatchNextAI</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <title>{{ movie.title or "Movie" }} • WatchNextAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 <body>
-
   <nav class="navbar">
-    <div class="brand">
+    <div class="nav-brand">
       <div class="logo">🎬</div>
       <div class="brand-text">
         <div class="brand-title">WatchNextAI</div>
-        <div class="brand-subtitle">Details</div>
+        <div class="brand-subtitle">Movie details</div>
       </div>
     </div>
 
     <div class="nav-actions">
-      <a class="pill-btn" href="/">← Back</a>
+      <a class="pill-btn" href="/">← Back to discover</a>
       <button id="themeToggle" class="pill-btn" type="button">
         <span id="themeIcon">🌙</span>
         <span id="themeLabel">Dark</span>
@@ -28,7 +27,7 @@
 
   <main class="detail">
     {% if error_message %}
-      <div class="toast toast-error">{{ error_message }}</div>
+      <div class="toast toast-error show">{{ error_message }}</div>
     {% endif %}
 
     <div class="detail-grid">
@@ -41,28 +40,40 @@
       </div>
 
       <div class="detail-info">
-        <h1 class="detail-title">{{ movie.title }}</h1>
+        <div class="detail-header">
+          <h1 class="detail-title">{{ movie.title or "Untitled" }}</h1>
+          {% if movie.tagline %}
+            <p class="detail-tagline">{{ movie.tagline }}</p>
+          {% endif %}
+        </div>
 
         <div class="detail-stats">
-          <span class="chip">⭐ {{ movie.vote_average }}</span>
-          <span class="chip">{{ movie.release_date or "Unknown date" }}</span>
+          <span class="chip">⭐ {{ "%.1f"|format(movie.vote_average or 0) }}</span>
+          <span class="chip">{{ movie.release_date or "Unknown release" }}</span>
           <span class="chip">{{ movie.runtime or "?" }} min</span>
+          {% if movie.genres %}
+            <span class="chip">{{ movie.genres | map(attribute='name') | join(', ') }}</span>
+          {% endif %}
         </div>
 
         <p class="detail-overview">{{ movie.overview or "No overview available." }}</p>
 
-        {% if trailer_key %}
-          <div class="trailer">
-            <iframe
-              src="https://www.youtube.com/embed/{{ trailer_key }}"
-              title="YouTube trailer"
-              frameborder="0"
-              allowfullscreen>
-            </iframe>
-          </div>
-        {% else %}
-          <p class="muted">No trailer available.</p>
-        {% endif %}
+        <section class="trailer-block">
+          <h2>Trailer</h2>
+          {% if trailer_key %}
+            <div class="trailer">
+              <iframe
+                src="https://www.youtube.com/embed/{{ trailer_key }}"
+                title="YouTube trailer"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          {% else %}
+            <p class="muted">No trailer available.</p>
+          {% endif %}
+        </section>
       </div>
     </div>
   </main>
