@@ -1,18 +1,21 @@
+# Python virtual environment
+venv/
+
+# Environment variables
 .env
 
-# Python cache files
+# Python cache / compiled files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual environment folders
-venv/
-env/
-
-# settings for Vs Code
+# VS Code settings
 .vscode/
 
-# Other OS files
+# OS junk
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
