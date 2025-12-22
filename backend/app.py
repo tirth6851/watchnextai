@@ -1,16 +1,20 @@
 from flask import Flask, render_template, request
 import requests
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
-# TMDB API Key
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
+
+
+def get_tmdb_api_key():
+    return os.getenv("TMDB_API_KEY")
 
 
 def fetch_tmdb_json(url):
@@ -28,21 +32,22 @@ def fetch_tmdb_json(url):
 # Home Route - Trending Movies
 @app.route("/")
 def home():
-    if not TMDB_API_KEY:
+    tmdb_api_key = get_tmdb_api_key()
+    if not tmdb_api_key:
         return render_template(
             "index.html",
             movies=[],
             TMDB_API_KEY=None,
-            error_message="Missing TMDB_API_KEY. Add it to your .env file.",
+            error_message="Missing TMDB_API_KEY. Add it to your environment or .env file.",
         )
 
-    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={TMDB_API_KEY}&page=1"
+    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={tmdb_api_key}&page=1"
     data, error = fetch_tmdb_json(url)
     movies = data.get("results", []) if data else []
     return render_template(
         "index.html",
         movies=movies,
-        TMDB_API_KEY=TMDB_API_KEY,
+        TMDB_API_KEY=tmdb_api_key,
         error_message=error,
     )
 
@@ -50,16 +55,17 @@ def home():
 # Movie Details Page
 @app.route("/movie/<int:movie_id>")
 def movie_details(movie_id):
-    if not TMDB_API_KEY:
+    tmdb_api_key = get_tmdb_api_key()
+    if not tmdb_api_key:
         return render_template(
             "movie.html",
             movie={},
             trailer_key=None,
-            error_message="Missing TMDB_API_KEY. Add it to your .env file.",
+            error_message="Missing TMDB_API_KEY. Add it to your environment or .env file.",
         )
 
     movie_url = (
-        f"{TMDB_BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}"
+        f"{TMDB_BASE_URL}/movie/{movie_id}?api_key={tmdb_api_key}"
         "&append_to_response=videos,reviews"
     )
     movie_data, error = fetch_tmdb_json(movie_url)
@@ -89,11 +95,12 @@ def movie_details(movie_id):
 # Infinite Scroll - Load More Movies
 @app.route("/load_more")
 def load_more():
-    if not TMDB_API_KEY:
+    tmdb_api_key = get_tmdb_api_key()
+    if not tmdb_api_key:
         return {"movies": [], "error": "Missing TMDB_API_KEY."}, 400
 
     page = request.args.get("page", 1)
-    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={TMDB_API_KEY}&page={page}"
+    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={tmdb_api_key}&page={page}"
     data, error = fetch_tmdb_json(url)
     if error:
         return {"movies": [], "error": error}, 502
