@@ -26,11 +26,18 @@
   <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
+    {% if error %}
+      <div class="error-banner">{{ error }}</div>
+    {% endif %}
     <div id="movie-container" class="movie-carousel">
       {% for movie in movies %}
         <div class="movie-card">
           <a href="/movie/{{ movie.id }}">
-            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            {% if movie.poster_path %}
+              <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            {% else %}
+              <div class="poster-placeholder">No Image</div>
+            {% endif %}
           </a>
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
@@ -41,10 +48,6 @@
     </div>
     <div id="loading" class="loading">Loading more movies...</div>
   </main>
-
-  <script>
-    const TMDB_API_KEY = "{{ TMDB_API_KEY }}"; // Passed from Flask
-  </script>
   <script src="/static/js/script.js"></script>
 </body>
 </html>

@@ -1,6 +1,8 @@
 let page = 1; // Pagination
 const container = document.getElementById("movie-container");
 const loading = document.getElementById("loading");
+let isLoading = false;
+let hasError = false;
 
 // Animate cards when visible and scale center card
 function animateCards() {
@@ -24,17 +26,38 @@ function animateCards() {
 
 // Infinite scroll loading
 async function loadMoreMovies() {
+  if (isLoading || hasError) return;
+  isLoading = true;
   loading.style.display = "block";
   page++;
-  const response = await fetch(`/load_more?page=${page}`);
-  const data = await response.json();
+  let data;
+
+  try {
+    const response = await fetch(`/load_more?page=${page}`);
+    data = await response.json();
+  } catch (error) {
+    hasError = true;
+    loading.textContent = "We couldn't load more movies right now.";
+    isLoading = false;
+    return;
+  }
+
+  if (data.error) {
+    hasError = true;
+    loading.textContent = data.error;
+    isLoading = false;
+    return;
+  }
 
   data.movies.forEach(movie => {
     const card = document.createElement("div");
     card.className = "movie-card";
+    const poster = movie.poster_path
+      ? `<img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">`
+      : `<div class="poster-placeholder">No Image</div>`;
     card.innerHTML = `
       <a href="/movie/${movie.id}">
-        <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
+        ${poster}
       </a>
       <div class="movie-info">
         <h3>${movie.title}</h3>
@@ -45,6 +68,8 @@ async function loadMoreMovies() {
   });
 
   loading.style.display = "none";
+  loading.textContent = "Loading more movies...";
+  isLoading = false;
   animateCards();
 }
 

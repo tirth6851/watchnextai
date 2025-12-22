@@ -83,6 +83,16 @@ main {
   margin-bottom: 20px;
 }
 
+.error-banner {
+  background-color: #ffebee;
+  border: 1px solid #ef5350;
+  color: #b71c1c;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
 /* Vertical Movie List */
 .movie-carousel {
   display: flex;
@@ -111,6 +121,17 @@ main {
 .movie-card img {
   width: 100%;
   display: block;
+}
+
+.poster-placeholder {
+  width: 100%;
+  height: 330px;
+  background: #2f2f2f;
+  color: #cfcfcf;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
 }
 
 .movie-info {
