@@ -83,6 +83,17 @@ main {
   margin-bottom: 20px;
 }
 
+.error-message {
+  color: #c62828;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.empty-state {
+  color: #555;
+  margin-top: 10px;
+}
+
 /* Vertical Movie List */
 .movie-carousel {
   display: flex;

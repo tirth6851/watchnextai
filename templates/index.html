@@ -26,11 +26,14 @@
   <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
+    {% if error_message %}
+      <p class="error-message">{{ error_message }}</p>
+    {% endif %}
     <div id="movie-container" class="movie-carousel">
       {% for movie in movies %}
         <div class="movie-card">
           <a href="/movie/{{ movie.id }}">
-            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            <img src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}" alt="{{ movie.title }}">
           </a>
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
@@ -39,6 +42,9 @@
         </div>
       {% endfor %}
     </div>
+    {% if not movies %}
+      <p class="empty-state">No movies available right now.</p>
+    {% endif %}
     <div id="loading" class="loading">Loading more movies...</div>
   </main>
 
