@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WatchNextAI - Home</title>
 
-  <!-- FIXED: use url_for -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
 
+<body>
+  <!-- Navigation Bar -->
   <nav class="navbar">
     <div class="logo">🎬 WatchNextAI</div>
+
     <ul class="nav-links">
       <li><a href="#">Movies</a></li>
       <li><a href="#">TV Shows</a></li>
@@ -18,12 +20,14 @@
       <li><a href="#">Series</a></li>
       <li><a href="#">Regions</a></li>
     </ul>
+
     <div class="search-box">
       <input type="text" placeholder="Search movies, shows..." />
-      <button>🔍</button>
+      <button type="button">🔍</button>
     </div>
   </nav>
 
+  <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
 
@@ -35,8 +39,12 @@
       {% for movie in movies %}
         <div class="movie-card">
           <a href="/movie/{{ movie.id }}">
-            <img src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}">
+            <img
+              src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}"
+              alt="{{ movie.title }}"
+            />
           </a>
+
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
             <p>⭐ {{ movie.vote_average }}</p>
@@ -45,10 +53,13 @@
       {% endfor %}
     </div>
 
+    {% if not movies %}
+      <p class="empty-state">No movies available right now.</p>
+    {% endif %}
+
     <div id="loading" class="loading">Loading more movies...</div>
   </main>
 
-  <!-- FIXED: JS via url_for -->
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
