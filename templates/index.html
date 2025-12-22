@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="system">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,33 +9,51 @@
 </head>
 
 <body>
-  <!-- Top Navbar -->
+  <!-- Navbar -->
   <nav class="navbar">
-    <div class="logo">🎬 WatchNextAI</div>
+    <div class="brand">
+      <div class="logo">🎬</div>
+      <div class="brand-text">
+        <div class="brand-title">WatchNextAI</div>
+        <div class="brand-subtitle">Trending now, one swipe at a time</div>
+      </div>
+    </div>
 
     <ul class="nav-links">
-      <li><a href="#">Movies</a></li>
-      <li><a href="#">TV Shows</a></li>
-      <li><a href="#">Live Shows</a></li>
-      <li><a href="#">Series</a></li>
-      <li><a href="#">Regions</a></li>
+      <li><a href="#" class="nav-link active">Movies</a></li>
+      <li><a href="#" class="nav-link">TV Shows</a></li>
+      <li><a href="#" class="nav-link">Live Shows</a></li>
+      <li><a href="#" class="nav-link">Series</a></li>
+      <li><a href="#" class="nav-link">Regions</a></li>
     </ul>
 
-    <div class="search-box">
-      <input type="text" placeholder="Search movies, shows..." />
-      <button type="button">🔍</button>
+    <div class="nav-actions">
+      <div class="search">
+        <input id="searchInput" type="text" placeholder="Search movies, shows..." />
+        <button id="searchBtn" class="icon-btn" type="button" aria-label="Search">🔍</button>
+      </div>
+
+      <button id="themeToggle" class="pill-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <span id="themeIcon" aria-hidden="true">🌙</span>
+        <span class="pill-text" id="themeLabel">Dark</span>
+      </button>
     </div>
   </nav>
 
-  <!-- TikTok-style feed -->
-  <main class="feed">
+  <!-- Feed -->
+  <main class="page">
+    <header class="page-header">
+      <h1 class="page-title">🔥 Trending Movies</h1>
+      <p class="page-hint">Scroll to snap. Click a poster for details.</p>
+    </header>
+
     {% if error_message %}
-      <p class="error-message">{{ error_message }}</p>
+      <div class="toast toast-error" role="status">{{ error_message }}</div>
     {% endif %}
 
-    <section id="movie-container" class="feed-container">
+    <section id="movie-container" class="feed" aria-label="Movie feed">
       {% for movie in movies %}
-        <article class="feed-item movie-card" data-id="{{ movie.id }}">
+        <article class="feed-item" data-id="{{ movie.id }}" data-title="{{ (movie.title or '')|lower }}">
           <a class="poster-link" href="/movie/{{ movie.id }}" aria-label="Open {{ movie.title }}">
             <img
               class="poster"
@@ -46,23 +64,37 @@
           </a>
 
           <div class="overlay">
-            <div class="title-row">
-              <h2 class="movie-title">{{ movie.title }}</h2>
-              <div class="rating">⭐ {{ movie.vote_average }}</div>
-            </div>
+            <div class="overlay-top">
+              <div class="title-wrap">
+                <h2 class="movie-title">{{ movie.title }}</h2>
+                {% if movie.release_date %}
+                  <div class="meta">{{ movie.release_date }}</div>
+                {% endif %}
+              </div>
 
-            {% if movie.release_date %}
-              <div class="meta">Released: {{ movie.release_date }}</div>
-            {% endif %}
+              <div class="badge" title="TMDB Rating">
+                <span aria-hidden="true">⭐</span>
+                <span>{{ movie.vote_average }}</span>
+              </div>
+            </div>
 
             {% if movie.overview %}
               <p class="overview">{{ movie.overview }}</p>
+            {% else %}
+              <p class="overview muted">No overview available.</p>
             {% endif %}
 
             <div class="actions">
               <a class="btn" href="/movie/{{ movie.id }}">Details</a>
               <button class="btn btn-ghost" type="button" data-action="save">Save</button>
+              <button class="btn btn-ghost" type="button" data-action="share">Share</button>
             </div>
+          </div>
+
+          <div class="right-rail" aria-hidden="true">
+            <div class="rail-btn">❤️</div>
+            <div class="rail-btn">➕</div>
+            <div class="rail-btn">↗️</div>
           </div>
         </article>
       {% endfor %}
@@ -72,7 +104,7 @@
       <p class="empty-state">No movies available right now.</p>
     {% endif %}
 
-    <div id="loading" class="loading">Loading more movies...</div>
+    <div id="loading" class="toast toast-neutral">Loading more movies...</div>
   </main>
 
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
