@@ -27,57 +27,51 @@ app = Flask(
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
+MOVIE_ENDPOINTS = {
+    "trending": "/trending/movie/week",
+    "popular": "/movie/popular",
+    "top_rated": "/movie/top_rated",
+    "upcoming": "/movie/upcoming",
+    "now_playing": "/movie/now_playing",
+}
 
-def fetch_tmdb_json(url: str):
-    """Fetch JSON from TMDB with basic error handling."""
+
+def tmdb_get(path: str, **params):
+    """Call TMDB API and return (json, error_string_or_None)."""
+    params["api_key"] = TMDB_API_KEY
+    url = f"{TMDB_BASE_URL}{path}"
     try:
-        response = requests.get(url, timeout=10)
-    except requests.RequestException as exc:
-        return None, f"Failed to reach TMDB: {exc}"
-
-    if not response.ok:
-        # Try to extract TMDB error message (if JSON)
-        try:
-            err = response.json()
-            msg = err.get("status_message") or str(err)
-            return None, f"TMDB error: {response.status_code} {msg}"
-        except Exception:
-            return None, f"TMDB error: {response.status_code} {response.reason}"
-
-    try:
-        return response.json(), None
-    except ValueError:
-        return None, "TMDB returned invalid JSON."
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        return r.json(), None
+    except Exception as e:
+        return None, str(e)
 
 
 # ----------------------------
 # Routes
 # ----------------------------
 
-# Home Route - Trending Movies
 @app.route("/")
 def home():
+    # default page uses Popular (bigger than trending)
     if not TMDB_API_KEY:
         return render_template(
             "index.html",
             movies=[],
-            TMDB_API_KEY=None,
-            error_message="Missing TMDB_API_KEY. Add it to your .env file (local) or Vercel env vars (deploy).",
+            error_message="Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy).",
         )
 
-    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={TMDB_API_KEY}&page=1"
-    data, error = fetch_tmdb_json(url)
-    movies = data.get("results", []) if data else []
+    data, err = tmdb_get("/movie/popular", page=1)
+    movies = (data or {}).get("results", [])
 
     return render_template(
         "index.html",
         movies=movies,
-        TMDB_API_KEY=None,  # NEVER expose key to frontend
-        error_message=error,
+        error_message=err,
     )
 
 
-# Movie Details Page
 @app.route("/movie/<int:movie_id>")
 def movie_details(movie_id: int):
     if not TMDB_API_KEY:
@@ -85,72 +79,92 @@ def movie_details(movie_id: int):
             "movie.html",
             movie={},
             trailer_key=None,
-            error_message="Missing TMDB_API_KEY. Add it to your .env file (local) or Vercel env vars (deploy).",
+            error_message="Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy).",
         )
 
-    movie_url = (
-        f"{TMDB_BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}"
-        "&append_to_response=videos,reviews"
+    data, err = tmdb_get(
+        f"/movie/{movie_id}",
+        append_to_response="videos,reviews"
     )
-    movie_data, error = fetch_tmdb_json(movie_url)
-    if error:
-        return render_template(
-            "movie.html",
-            movie={},
-            trailer_key=None,
-            error_message=error,
-        )
+    if err:
+        return render_template("movie.html", movie={}, trailer_key=None, error_message=err)
 
-    # Extract trailer key from videos
     trailer_key = None
-    videos = (movie_data or {}).get("videos", {}).get("results", [])
-    for video in videos:
-        if video.get("type") == "Trailer" and video.get("site") == "YouTube":
-            trailer_key = video.get("key")
+    videos = (data or {}).get("videos", {}).get("results", [])
+    for v in videos:
+        if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+            trailer_key = v.get("key")
             break
 
     return render_template(
         "movie.html",
-        movie=movie_data or {},
+        movie=data or {},
         trailer_key=trailer_key,
-        error_message=None,
+        error_message=None
     )
 
 
-# Infinite Scroll - Load More Movies
 @app.route("/load_more")
 def load_more():
+    """
+    Supports:
+    /load_more?page=2&category=popular
+    /load_more?page=3&category=discover
+    /load_more?page=1&q=batman
+    """
     if not TMDB_API_KEY:
         return jsonify({"movies": [], "error": "Missing TMDB_API_KEY."}), 400
 
-    # Validate page
+    category = request.args.get("category", "popular").strip()
+    q = request.args.get("q", "").strip()
+
     try:
         page = int(request.args.get("page", 1))
     except ValueError:
         return jsonify({"movies": [], "error": "Invalid page."}), 400
 
     if page < 1 or page > 500:
-        return jsonify({"movies": [], "error": "Page out of range."}), 400
+        return jsonify({"movies": [], "error": "Page out of range (1..500)."}), 400
 
-    url = f"{TMDB_BASE_URL}/trending/movie/week?api_key={TMDB_API_KEY}&page={page}"
-    data, error = fetch_tmdb_json(url)
-    if error:
-        return jsonify({"movies": [], "error": error}), 502
+    # Search = huge library access
+    if q:
+        data, err = tmdb_get(
+            "/search/movie",
+            query=q,
+            page=page,
+            include_adult="false"
+        )
+        if err:
+            return jsonify({"movies": [], "error": err}), 502
+        return jsonify({"movies": (data or {}).get("results", [])})
 
-    return jsonify({"movies": data.get("results", [])})
+    # Known category endpoints
+    if category in MOVIE_ENDPOINTS:
+        data, err = tmdb_get(MOVIE_ENDPOINTS[category], page=page)
+        if err:
+            return jsonify({"movies": [], "error": err}), 502
+        return jsonify({"movies": (data or {}).get("results", [])})
+
+    # Discover = massive + always available
+    if category == "discover":
+        data, err = tmdb_get(
+            "/discover/movie",
+            page=page,
+            sort_by="popularity.desc",
+            include_adult="false",
+            include_video="false"
+        )
+        if err:
+            return jsonify({"movies": [], "error": err}), 502
+        return jsonify({"movies": (data or {}).get("results", [])})
+
+    return jsonify({"movies": [], "error": "Unknown category."}), 400
 
 
-# Health check (helps debugging on Vercel)
 @app.route("/health")
 def health():
-    return jsonify(
-        {
-            "status": "ok",
-            "tmdb_key_present": bool(TMDB_API_KEY),
-        }
-    )
+    return jsonify({"status": "ok", "tmdb_key_present": bool(TMDB_API_KEY)})
 
 
-# Run locally only (Vercel will not use this block)
 if __name__ == "__main__":
     app.run(debug=True)

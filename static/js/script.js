@@ -2,144 +2,176 @@ let page = 1;
 let isLoading = false;
 let hasMore = true;
 
-const grid = document.getElementById("movieGrid");
+let currentCategory = "popular"; // huge default
+let currentQuery = "";
+
+const container = document.getElementById("movie-container");
 const loading = document.getElementById("loading");
-const loadingText = document.getElementById("loadingText");
 
 const themeToggle = document.getElementById("themeToggle");
+const themeIcon = document.getElementById("themeIcon");
+const themeLabel = document.getElementById("themeLabel");
+
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 
-// -------- THEME ----------
-function setTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
+const navLinks = document.getElementById("navLinks");
+const pageTitle = document.getElementById("pageTitle");
 
-  if (themeToggle) {
-    const icon = themeToggle.querySelector(".btn-icon");
-    const text = themeToggle.querySelector(".btn-text");
-    if (theme === "light") {
-      icon.textContent = "☀️";
-      text.textContent = "Light";
-    } else {
-      icon.textContent = "🌙";
-      text.textContent = "Dark";
-    }
+const titles = {
+  popular: "🔥 Popular Movies",
+  top_rated: "⭐ Top Rated Movies",
+  now_playing: "🎟️ Now Playing",
+  upcoming: "📅 Upcoming Movies",
+  discover: "🧭 Discover Movies",
+  trending: "🔥 Trending Movies"
+};
+
+function applyTheme(mode) {
+  document.documentElement.setAttribute("data-theme", mode);
+  if (mode === "dark") {
+    themeIcon && (themeIcon.textContent = "🌙");
+    themeLabel && (themeLabel.textContent = "Dark");
+  } else {
+    themeIcon && (themeIcon.textContent = "☀️");
+    themeLabel && (themeLabel.textContent = "Light");
   }
-
-  try { localStorage.setItem("watchnextai_theme", theme); } catch (_) {}
 }
 
-function initTheme() {
-  let saved = null;
-  try { saved = localStorage.getItem("watchnextai_theme"); } catch (_) {}
+function loadTheme() {
+  const saved = localStorage.getItem("wn_theme") || "dark";
+  applyTheme(saved);
+}
 
-  if (saved === "light" || saved === "dark") {
-    setTheme(saved);
-    return;
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
+  const next = current === "dark" ? "light" : "dark";
+  localStorage.setItem("wn_theme", next);
+  applyTheme(next);
+}
+
+themeToggle?.addEventListener("click", toggleTheme);
+loadTheme();
+
+function setActiveCategoryButton(category) {
+  if (!navLinks) return;
+  navLinks.querySelectorAll(".nav-link").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.category === category);
+  });
+}
+
+async function fetchMovies(nextPage) {
+  const params = new URLSearchParams({
+    page: String(nextPage),
+    category: currentCategory
+  });
+
+  if (currentQuery) params.set("q", currentQuery);
+
+  const res = await fetch(`/load_more?${params.toString()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
   }
-
-  const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
-  setTheme(prefersLight ? "light" : "dark");
+  return res.json();
 }
 
-if (themeToggle) {
-  themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme") || "dark";
-    setTheme(current === "dark" ? "light" : "dark");
-  });
-}
-initTheme();
+function renderMovieCard(movie) {
+  const item = document.createElement("article");
+  item.className = "card";
 
-// -------- SEARCH (client-side) ----------
-function filterCards(query) {
-  if (!grid) return;
-  const q = (query || "").trim().toLowerCase();
-  const cards = grid.querySelectorAll(".card");
-
-  cards.forEach(card => {
-    const title = card.getAttribute("data-title") || "";
-    card.style.display = (q === "" || title.includes(q)) ? "" : "none";
-  });
-}
-
-if (searchBtn && searchInput) {
-  searchBtn.addEventListener("click", () => filterCards(searchInput.value));
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") filterCards(searchInput.value);
-  });
-}
-
-// -------- INFINITE SCROLL ----------
-function setLoading(show, text) {
-  if (!loading || !loadingText) return;
-  loading.style.display = show ? "flex" : "none";
-  if (text) loadingText.textContent = text;
-}
-
-function makeCard(movie) {
-  const card = document.createElement("article");
-  card.className = "card";
-  card.setAttribute("data-title", (movie.title || "").toLowerCase());
-
-  const poster = movie.poster_path
+  const posterPath = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : "https://via.placeholder.com/500x750?text=No+Image";
 
-  const rating = (movie.vote_average ?? 0).toFixed(1);
-  const date = movie.release_date ? movie.release_date : "";
-
-  card.innerHTML = `
+  item.innerHTML = `
     <a class="card-link" href="/movie/${movie.id}">
-      <div class="poster">
-        <img loading="lazy" src="${poster}" alt="${movie.title || "Movie"}" />
-      </div>
-      <div class="meta">
-        <h3 class="movie-title">${movie.title || "Untitled"}</h3>
-        <div class="row">
-          <span class="badge">⭐ ${rating}</span>
-          <span class="muted">${date}</span>
-        </div>
-      </div>
+      <img class="poster" src="${posterPath}" alt="${movie.title || "Movie"}" loading="lazy">
     </a>
+    <div class="card-meta">
+      <div class="card-title">${movie.title || "Untitled"}</div>
+      <div class="card-sub">
+        <span class="rating">⭐ ${(movie.vote_average ?? "").toString().slice(0, 3)}</span>
+        <span class="date">${movie.release_date || ""}</span>
+      </div>
+    </div>
   `;
-  return card;
+  return item;
 }
 
 async function loadMoreMovies() {
-  if (!grid || isLoading || !hasMore) return;
-
+  if (isLoading || !hasMore) return;
   isLoading = true;
-  setLoading(true, "Loading more movies…");
+
+  loading.style.display = "block";
+  loading.textContent = "Loading more movies...";
+
   page += 1;
 
   try {
-    const res = await fetch(`/load_more?page=${page}`);
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      hasMore = false;
-      setLoading(true, data.error || "Failed to load more.");
-      return;
-    }
-
+    const data = await fetchMovies(page);
     const movies = data.movies || [];
-    if (movies.length === 0) {
+
+    if (!movies.length) {
       hasMore = false;
-      setLoading(true, "No more movies to load.");
+      loading.textContent = "No more movies to load.";
       return;
     }
 
-    movies.forEach(m => grid.appendChild(makeCard(m)));
-    setLoading(false);
+    movies.forEach(m => container.appendChild(renderMovieCard(m)));
+    loading.style.display = "none";
   } catch (err) {
     hasMore = false;
-    setLoading(true, err.message || "Network error.");
+    loading.textContent = "Error loading more movies.";
+    console.error(err);
   } finally {
     isLoading = false;
   }
 }
 
-window.addEventListener("scroll", () => {
-  const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 700;
+function resetAndLoadFirstPage() {
+  page = 0;         // because loadMore increments first
+  hasMore = true;
+  isLoading = false;
+  container.innerHTML = "";
+  loading.style.display = "none";
+  loadMoreMovies();
+}
+
+function handleScroll() {
+  const scrollBottom = window.innerHeight + window.scrollY;
+  const nearBottom = scrollBottom >= document.body.offsetHeight - 900;
   if (nearBottom) loadMoreMovies();
+}
+
+window.addEventListener("scroll", handleScroll);
+
+navLinks?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".nav-link");
+  if (!btn) return;
+
+  currentCategory = btn.dataset.category;
+  currentQuery = "";
+  searchInput && (searchInput.value = "");
+
+  setActiveCategoryButton(currentCategory);
+  pageTitle && (pageTitle.textContent = titles[currentCategory] || "Movies");
+  resetAndLoadFirstPage();
 });
+
+async function runSearch() {
+  const q = (searchInput?.value || "").trim();
+  currentQuery = q;
+  if (pageTitle) pageTitle.textContent = q ? `🔎 Results for "${q}"` : (titles[currentCategory] || "Movies");
+  resetAndLoadFirstPage();
+}
+
+searchBtn?.addEventListener("click", runSearch);
+searchInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") runSearch();
+});
+
+/* Initial state */
+setActiveCategoryButton(currentCategory);
+pageTitle && (pageTitle.textContent = titles[currentCategory] || "Movies");
+resetAndLoadFirstPage();
