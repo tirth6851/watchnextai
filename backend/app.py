@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
-import requests
 import os
 from pathlib import Path
+import requests
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +17,7 @@ app = Flask(
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
+REQUEST_TIMEOUT = 10
 
 MOVIE_ENDPOINTS = {
     "trending": "/trending/movie/week",
@@ -26,6 +27,7 @@ MOVIE_ENDPOINTS = {
     "now_playing": "/movie/now_playing",
 }
 
+
 def tmdb_get(path: str, **params):
     if not TMDB_API_KEY:
         return None, "Missing TMDB_API_KEY."
@@ -34,11 +36,12 @@ def tmdb_get(path: str, **params):
     url = f"{TMDB_BASE_URL}{path}"
 
     try:
-        r = requests.get(url, params=params, timeout=10)
-        r.raise_for_status()
-        return r.json(), None
-    except requests.RequestException as e:
-        return None, str(e)
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        return response.json(), None
+    except requests.RequestException as exc:
+        return None, str(exc)
+
 
 @app.route("/")
 def home():
@@ -46,7 +49,9 @@ def home():
         return render_template(
             "index.html",
             movies=[],
-            error_message="Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy).",
+            error_message=(
+                "Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy)."
+            ),
         )
 
     data, err = tmdb_get(
@@ -60,6 +65,7 @@ def home():
 
     return render_template("index.html", movies=movies, error_message=err)
 
+
 @app.route("/movie/<int:movie_id>")
 def movie_details(movie_id: int):
     if not TMDB_API_KEY:
@@ -67,25 +73,29 @@ def movie_details(movie_id: int):
             "movie.html",
             movie={},
             trailer_key=None,
-            error_message="Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy).",
+            error_message=(
+                "Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy)."
+            ),
         )
 
-    data, err = tmdb_get(
-        f"/movie/{movie_id}",
-        append_to_response="videos,reviews",
-    )
-
+    data, err = tmdb_get(f"/movie/{movie_id}", append_to_response="videos")
     if err:
         return render_template("movie.html", movie={}, trailer_key=None, error_message=err)
 
     trailer_key = None
     videos = (data or {}).get("videos", {}).get("results", [])
-    for v in videos:
-        if v.get("site") == "YouTube" and v.get("type") == "Trailer":
-            trailer_key = v.get("key")
+    for video in videos:
+        if video.get("site") == "YouTube" and video.get("type") == "Trailer":
+            trailer_key = video.get("key")
             break
 
-    return render_template("movie.html", movie=data or {}, trailer_key=trailer_key, error_message=None)
+    return render_template(
+        "movie.html",
+        movie=data or {},
+        trailer_key=trailer_key,
+        error_message=None,
+    )
+
 
 @app.route("/load_more")
 def load_more():
@@ -104,7 +114,12 @@ def load_more():
         return jsonify({"movies": [], "error": "Page out of range (1..500)."}), 400
 
     if q:
-        data, err = tmdb_get("/search/movie", query=q, page=page, include_adult="false")
+        data, err = tmdb_get(
+            "/search/movie",
+            query=q,
+            page=page,
+            include_adult="false",
+        )
         if err:
             return jsonify({"movies": [], "error": err}), 502
         return jsonify({"movies": (data or {}).get("results", [])})
@@ -129,9 +144,11 @@ def load_more():
 
     return jsonify({"movies": [], "error": "Unknown category."}), 400
 
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "tmdb_key_present": bool(TMDB_API_KEY)})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
