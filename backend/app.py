@@ -8,7 +8,16 @@ from dotenv import load_dotenv
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
-app = Flask(__name__, template_folder="../templates", static_folder="../static")
+
+ROOT = Path(__file__).resolve().parents[1]
+app = Flask(
+    __name__,
+    template_folder=str(ROOT / "templates"),
+    static_folder=str(ROOT / "static"),
+    static_url_path="/static",
+)
+
+
 
 # TMDB API Key
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
