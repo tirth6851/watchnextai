@@ -1,110 +1,86 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="system">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WatchNextAI - Home</title>
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <title>WatchNextAI • Trending</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 
 <body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="brand">
-      <div class="logo">🎬</div>
-      <div class="brand-text">
-        <div class="brand-title">WatchNextAI</div>
-        <div class="brand-subtitle">Trending now, one swipe at a time</div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('home') }}">
+        <span class="brand-mark">🎬</span>
+        <span class="brand-name">WatchNextAI</span>
+        <span class="brand-sub">Trending now, one swipe at a time</span>
+      </a>
+
+      <nav class="nav">
+        <a class="nav-link is-active" href="{{ url_for('home') }}">Movies</a>
+        <a class="nav-link disabled" href="#" aria-disabled="true">TV</a>
+        <a class="nav-link disabled" href="#" aria-disabled="true">Live</a>
+        <a class="nav-link disabled" href="#" aria-disabled="true">Series</a>
+        <a class="nav-link disabled" href="#" aria-disabled="true">Regions</a>
+      </nav>
+
+      <div class="actions">
+        <div class="search">
+          <input id="searchInput" type="text" placeholder="Search (client-side)..." />
+          <button id="searchBtn" class="icon-btn" type="button" title="Search">🔍</button>
+        </div>
+
+        <button id="themeToggle" class="btn" type="button" title="Toggle theme">
+          <span class="btn-icon">🌙</span>
+          <span class="btn-text">Dark</span>
+        </button>
       </div>
     </div>
+  </header>
 
-    <ul class="nav-links">
-      <li><a href="#" class="nav-link active">Movies</a></li>
-      <li><a href="#" class="nav-link">TV Shows</a></li>
-      <li><a href="#" class="nav-link">Live Shows</a></li>
-      <li><a href="#" class="nav-link">Series</a></li>
-      <li><a href="#" class="nav-link">Regions</a></li>
-    </ul>
-
-    <div class="nav-actions">
-      <div class="search">
-        <input id="searchInput" type="text" placeholder="Search movies, shows..." />
-        <button id="searchBtn" class="icon-btn" type="button" aria-label="Search">🔍</button>
-      </div>
-
-      <button id="themeToggle" class="pill-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
-        <span id="themeIcon" aria-hidden="true">🌙</span>
-        <span class="pill-text" id="themeLabel">Dark</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- Feed -->
   <main class="page">
-    <header class="page-header">
-      <h1 class="page-title">🔥 Trending Movies</h1>
-      <p class="page-hint">Scroll to snap. Click a poster for details.</p>
-    </header>
+    <section class="section-head">
+      <h1 class="title">🔥 Trending Movies</h1>
+      <p class="subtitle">Scroll to load more. Click a card for details.</p>
+    </section>
 
     {% if error_message %}
-      <div class="toast toast-error" role="status">{{ error_message }}</div>
+      <div class="alert">{{ error_message }}</div>
     {% endif %}
 
-    <section id="movie-container" class="feed" aria-label="Movie feed">
+    <section id="movieGrid" class="grid" aria-label="Trending movies">
       {% for movie in movies %}
-        <article class="feed-item" data-id="{{ movie.id }}" data-title="{{ (movie.title or '')|lower }}">
-          <a class="poster-link" href="/movie/{{ movie.id }}" aria-label="Open {{ movie.title }}">
-            <img
-              class="poster"
-              src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w500{{ movie.poster_path }}{% else %}https://via.placeholder.com/500x750?text=No+Image{% endif %}"
-              alt="{{ movie.title }}"
-              loading="lazy"
-            />
-          </a>
-
-          <div class="overlay">
-            <div class="overlay-top">
-              <div class="title-wrap">
-                <h2 class="movie-title">{{ movie.title }}</h2>
+        <article class="card" data-title="{{ (movie.title or '')|lower }}">
+          <a class="card-link" href="/movie/{{ movie.id }}">
+            <div class="poster">
+              <img
+                loading="lazy"
+                src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w500{{ movie.poster_path }}{% else %}https://via.placeholder.com/500x750?text=No+Image{% endif %}"
+                alt="{{ movie.title }}"
+              />
+            </div>
+            <div class="meta">
+              <h3 class="movie-title">{{ movie.title }}</h3>
+              <div class="row">
+                <span class="badge">⭐ {{ "%.1f"|format(movie.vote_average or 0) }}</span>
                 {% if movie.release_date %}
-                  <div class="meta">{{ movie.release_date }}</div>
+                  <span class="muted">{{ movie.release_date }}</span>
                 {% endif %}
               </div>
-
-              <div class="badge" title="TMDB Rating">
-                <span aria-hidden="true">⭐</span>
-                <span>{{ movie.vote_average }}</span>
-              </div>
             </div>
-
-            {% if movie.overview %}
-              <p class="overview">{{ movie.overview }}</p>
-            {% else %}
-              <p class="overview muted">No overview available.</p>
-            {% endif %}
-
-            <div class="actions">
-              <a class="btn" href="/movie/{{ movie.id }}">Details</a>
-              <button class="btn btn-ghost" type="button" data-action="save">Save</button>
-              <button class="btn btn-ghost" type="button" data-action="share">Share</button>
-            </div>
-          </div>
-
-          <div class="right-rail" aria-hidden="true">
-            <div class="rail-btn">❤️</div>
-            <div class="rail-btn">➕</div>
-            <div class="rail-btn">↗️</div>
-          </div>
+          </a>
         </article>
       {% endfor %}
     </section>
 
     {% if not movies %}
-      <p class="empty-state">No movies available right now.</p>
+      <p class="empty">No movies available right now.</p>
     {% endif %}
 
-    <div id="loading" class="toast toast-neutral">Loading more movies...</div>
+    <div id="loading" class="loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <span id="loadingText">Loading more movies…</span>
+    </div>
   </main>
 
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>

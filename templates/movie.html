@@ -1,25 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ movie.title }} - WatchNextAI</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ movie.title or "Movie" }} • WatchNextAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
+
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('home') }}">
+        <span class="brand-mark">🎬</span>
+        <span class="brand-name">WatchNextAI</span>
+        <span class="brand-sub">Details</span>
+      </a>
 
-  <h1>{{ movie.title }}</h1>
+      <nav class="nav">
+        <a class="nav-link" href="{{ url_for('home') }}">Back to Trending</a>
+      </nav>
 
-  {% if trailer_key %}
-    <iframe width="560" height="315"
-      src="https://www.youtube.com/embed/{{ trailer_key }}"
-      frameborder="0" allowfullscreen>
-    </iframe>
-  {% else %}
-    <p>No trailer available.</p>
-  {% endif %}
+      <div class="actions">
+        <button id="themeToggle" class="btn" type="button" title="Toggle theme">
+          <span class="btn-icon">🌙</span>
+          <span class="btn-text">Dark</span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-  <h2>Overview</h2>
-  <p>{{ movie.overview }}</p>
+  <main class="page">
+    {% if error_message %}
+      <div class="alert">{{ error_message }}</div>
+    {% endif %}
 
+    <section class="details">
+      <div class="details-left">
+        <div class="details-poster">
+          <img
+            src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w500{{ movie.poster_path }}{% else %}https://via.placeholder.com/500x750?text=No+Image{% endif %}"
+            alt="{{ movie.title }}"
+          />
+        </div>
+      </div>
+
+      <div class="details-right">
+        <h1 class="details-title">{{ movie.title or "Movie Details" }}</h1>
+
+        <div class="details-meta">
+          {% if movie.vote_average %}
+            <span class="badge big">⭐ {{ "%.1f"|format(movie.vote_average) }}</span>
+          {% endif %}
+          {% if movie.release_date %}
+            <span class="muted">Released: {{ movie.release_date }}</span>
+          {% endif %}
+          {% if movie.runtime %}
+            <span class="muted">• {{ movie.runtime }} min</span>
+          {% endif %}
+        </div>
+
+        {% if movie.genres %}
+          <div class="chips">
+            {% for g in movie.genres %}
+              <span class="chip">{{ g.name }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="panel">
+          <h2 class="panel-title">Overview</h2>
+          <p class="panel-text">{{ movie.overview or "No overview available." }}</p>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">Trailer</h2>
+          {% if trailer_key %}
+            <div class="video">
+              <iframe
+                src="https://www.youtube.com/embed/{{ trailer_key }}"
+                title="Trailer"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          {% else %}
+            <p class="muted">No trailer available.</p>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">Reviews</h2>
+          {% if movie.reviews and movie.reviews.results %}
+            <div class="reviews">
+              {% for review in movie.reviews.results[:6] %}
+                <div class="review">
+                  <div class="review-head">
+                    <strong>{{ review.author }}</strong>
+                  </div>
+                  <p class="review-body">{{ review.content }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted">No reviews available.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

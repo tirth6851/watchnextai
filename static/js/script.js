@@ -1,202 +1,145 @@
 let page = 1;
-const container = document.getElementById("movie-container");
-const loading = document.getElementById("loading");
-
-const themeToggle = document.getElementById("themeToggle");
-const themeIcon = document.getElementById("themeIcon");
-const themeLabel = document.getElementById("themeLabel");
-
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
-
 let isLoading = false;
 let hasMore = true;
 
-/* =========================
-   Theme (system / light / dark)
-   ========================= */
-function getSystemTheme() {
-  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
+const grid = document.getElementById("movieGrid");
+const loading = document.getElementById("loading");
+const loadingText = document.getElementById("loadingText");
 
-function applyTheme(mode) {
-  // mode: "system" | "light" | "dark"
-  document.documentElement.setAttribute("data-theme", mode);
+const themeToggle = document.getElementById("themeToggle");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
 
-  const effective = mode === "system" ? getSystemTheme() : mode;
-  if (effective === "dark") {
-    themeIcon.textContent = "🌙";
-    themeLabel.textContent = "Dark";
-  } else {
-    themeIcon.textContent = "☀️";
-    themeLabel.textContent = "Light";
-  }
-}
+// -------- THEME ----------
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
 
-function loadTheme() {
-  const saved = localStorage.getItem("wn_theme") || "system";
-  applyTheme(saved);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute("data-theme") || "system";
-  const next = current === "dark" ? "light" : "dark"; // simple toggle between dark/light
-  localStorage.setItem("wn_theme", next);
-  applyTheme(next);
-}
-
-themeToggle?.addEventListener("click", toggleTheme);
-
-// If user uses "system", update live when OS theme changes
-if (window.matchMedia) {
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    const current = document.documentElement.getAttribute("data-theme") || "system";
-    if (current === "system") applyTheme("system");
-  });
-}
-
-loadTheme();
-
-/* =========================
-   Active card detection (IntersectionObserver)
-   ========================= */
-function setupActiveObserver() {
-  const items = document.querySelectorAll(".feed-item");
-  if (!items.length) return;
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      // pick the entry with the highest intersectionRatio
-      let best = null;
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
-        }
-      }
-      if (best?.target) {
-        document.querySelectorAll(".feed-item").forEach(el => el.classList.remove("active"));
-        best.target.classList.add("active");
-      }
-    },
-    { root: container, threshold: [0.35, 0.5, 0.65, 0.8] }
-  );
-
-  items.forEach(item => observer.observe(item));
-}
-
-/* =========================
-   Infinite scroll
-   ========================= */
-async function loadMoreMovies() {
-  if (isLoading || !hasMore) return;
-
-  isLoading = true;
-  loading.style.display = "block";
-  loading.textContent = "Loading more movies...";
-
-  page++;
-
-  let data = { movies: [], error: "Failed to load more movies." };
-
-  try {
-    const response = await fetch(`/load_more?page=${page}`);
-    if (response.ok) {
-      data = await response.json();
+  if (themeToggle) {
+    const icon = themeToggle.querySelector(".btn-icon");
+    const text = themeToggle.querySelector(".btn-text");
+    if (theme === "light") {
+      icon.textContent = "☀️";
+      text.textContent = "Light";
     } else {
-      data.error = `Failed to load more movies (${response.status}).`;
+      icon.textContent = "🌙";
+      text.textContent = "Dark";
     }
-  } catch (err) {
-    data.error = err.message || data.error;
   }
 
-  if (!data.movies || data.movies.length === 0) {
-    hasMore = false;
-    loading.textContent = data.error || "No more movies to load.";
-    isLoading = false;
+  try { localStorage.setItem("watchnextai_theme", theme); } catch (_) {}
+}
+
+function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("watchnextai_theme"); } catch (_) {}
+
+  if (saved === "light" || saved === "dark") {
+    setTheme(saved);
     return;
   }
 
-  data.movies.forEach(movie => {
-    const item = document.createElement("article");
-    item.className = "feed-item";
-    item.dataset.id = movie.id;
-    item.dataset.title = (movie.title || "").toLowerCase();
-
-    const posterPath = movie.poster_path
-      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-      : "https://via.placeholder.com/500x750?text=No+Image";
-
-    const overview = movie.overview ? movie.overview : "No overview available.";
-
-    item.innerHTML = `
-      <a class="poster-link" href="/movie/${movie.id}" aria-label="Open ${movie.title}">
-        <img class="poster" src="${posterPath}" alt="${movie.title}" loading="lazy">
-      </a>
-
-      <div class="overlay">
-        <div class="overlay-top">
-          <div class="title-wrap">
-            <h2 class="movie-title">${movie.title}</h2>
-            ${movie.release_date ? `<div class="meta">${movie.release_date}</div>` : ``}
-          </div>
-
-          <div class="badge" title="TMDB Rating">
-            <span aria-hidden="true">⭐</span>
-            <span>${movie.vote_average ?? ""}</span>
-          </div>
-        </div>
-
-        <p class="overview">${overview}</p>
-
-        <div class="actions">
-          <a class="btn" href="/movie/${movie.id}">Details</a>
-          <button class="btn btn-ghost" type="button" data-action="save">Save</button>
-          <button class="btn btn-ghost" type="button" data-action="share">Share</button>
-        </div>
-      </div>
-
-      <div class="right-rail" aria-hidden="true">
-        <div class="rail-btn">❤️</div>
-        <div class="rail-btn">➕</div>
-        <div class="rail-btn">↗️</div>
-      </div>
-    `;
-
-    container.appendChild(item);
-  });
-
-  // re-run observer on new items
-  setupActiveObserver();
-
-  loading.style.display = "none";
-  isLoading = false;
+  const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  setTheme(prefersLight ? "light" : "dark");
 }
 
-container?.addEventListener("scroll", () => {
-  const nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 900;
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    setTheme(current === "dark" ? "light" : "dark");
+  });
+}
+initTheme();
+
+// -------- SEARCH (client-side) ----------
+function filterCards(query) {
+  if (!grid) return;
+  const q = (query || "").trim().toLowerCase();
+  const cards = grid.querySelectorAll(".card");
+
+  cards.forEach(card => {
+    const title = card.getAttribute("data-title") || "";
+    card.style.display = (q === "" || title.includes(q)) ? "" : "none";
+  });
+}
+
+if (searchBtn && searchInput) {
+  searchBtn.addEventListener("click", () => filterCards(searchInput.value));
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") filterCards(searchInput.value);
+  });
+}
+
+// -------- INFINITE SCROLL ----------
+function setLoading(show, text) {
+  if (!loading || !loadingText) return;
+  loading.style.display = show ? "flex" : "none";
+  if (text) loadingText.textContent = text;
+}
+
+function makeCard(movie) {
+  const card = document.createElement("article");
+  card.className = "card";
+  card.setAttribute("data-title", (movie.title || "").toLowerCase());
+
+  const poster = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : "https://via.placeholder.com/500x750?text=No+Image";
+
+  const rating = (movie.vote_average ?? 0).toFixed(1);
+  const date = movie.release_date ? movie.release_date : "";
+
+  card.innerHTML = `
+    <a class="card-link" href="/movie/${movie.id}">
+      <div class="poster">
+        <img loading="lazy" src="${poster}" alt="${movie.title || "Movie"}" />
+      </div>
+      <div class="meta">
+        <h3 class="movie-title">${movie.title || "Untitled"}</h3>
+        <div class="row">
+          <span class="badge">⭐ ${rating}</span>
+          <span class="muted">${date}</span>
+        </div>
+      </div>
+    </a>
+  `;
+  return card;
+}
+
+async function loadMoreMovies() {
+  if (!grid || isLoading || !hasMore) return;
+
+  isLoading = true;
+  setLoading(true, "Loading more movies…");
+  page += 1;
+
+  try {
+    const res = await fetch(`/load_more?page=${page}`);
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      hasMore = false;
+      setLoading(true, data.error || "Failed to load more.");
+      return;
+    }
+
+    const movies = data.movies || [];
+    if (movies.length === 0) {
+      hasMore = false;
+      setLoading(true, "No more movies to load.");
+      return;
+    }
+
+    movies.forEach(m => grid.appendChild(makeCard(m)));
+    setLoading(false);
+  } catch (err) {
+    hasMore = false;
+    setLoading(true, err.message || "Network error.");
+  } finally {
+    isLoading = false;
+  }
+}
+
+window.addEventListener("scroll", () => {
+  const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 700;
   if (nearBottom) loadMoreMovies();
 });
-
-/* =========================
-   Search filter (client-side)
-   ========================= */
-function filterMovies(query) {
-  const q = (query || "").trim().toLowerCase();
-  const items = document.querySelectorAll(".feed-item");
-
-  items.forEach(item => {
-    const title = item.dataset.title || "";
-    item.style.display = q === "" || title.includes(q) ? "" : "none";
-  });
-}
-
-searchBtn?.addEventListener("click", () => filterMovies(searchInput.value));
-searchInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") filterMovies(searchInput.value);
-});
-
-/* Init */
-setupActiveObserver();
-loading.style.display = "none";
