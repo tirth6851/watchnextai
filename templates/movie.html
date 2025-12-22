@@ -2,41 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ movie.title }} - WatchNextAI</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <header>
-    <h1>{{ movie.title or "Movie Details" }}</h1>
-    {% if movie.vote_average %}
-      <p>⭐ Rating: {{ movie.vote_average }}</p>
-    {% endif %}
-  </header>
 
-  <main>
-    {% if error_message %}
-      <p class="error-message">{{ error_message }}</p>
-    {% endif %}
-    {% if trailer_key %}
-      <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ trailer_key }}" frameborder="0" allowfullscreen></iframe>
-    {% else %}
-      <p>No trailer available.</p>
-    {% endif %}
+  <h1>{{ movie.title }}</h1>
 
-    <h2>Overview</h2>
-    <p>{{ movie.overview or "No overview available." }}</p>
+  {% if trailer_key %}
+    <iframe width="560" height="315"
+      src="https://www.youtube.com/embed/{{ trailer_key }}"
+      frameborder="0" allowfullscreen>
+    </iframe>
+  {% else %}
+    <p>No trailer available.</p>
+  {% endif %}
 
-    <h2>Reviews</h2>
-    {% if movie.reviews.results %}
-      <ul>
-        {% for review in movie.reviews.results %}
-          <li><strong>{{ review.author }}:</strong> {{ review.content }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No reviews available.</p>
-    {% endif %}
-  </main>
+  <h2>Overview</h2>
+  <p>{{ movie.overview }}</p>
+
 </body>
 </html>

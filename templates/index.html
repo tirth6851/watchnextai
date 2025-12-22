@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WatchNextAI - Home</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+
+  <!-- FIXED: use url_for -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <!-- Navigation Bar -->
+
   <nav class="navbar">
     <div class="logo">🎬 WatchNextAI</div>
     <ul class="nav-links">
@@ -23,17 +24,18 @@
     </div>
   </nav>
 
-  <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
+
     {% if error_message %}
       <p class="error-message">{{ error_message }}</p>
     {% endif %}
+
     <div id="movie-container" class="movie-carousel">
       {% for movie in movies %}
         <div class="movie-card">
           <a href="/movie/{{ movie.id }}">
-            <img src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}" alt="{{ movie.title }}">
+            <img src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}">
           </a>
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
@@ -42,15 +44,11 @@
         </div>
       {% endfor %}
     </div>
-    {% if not movies %}
-      <p class="empty-state">No movies available right now.</p>
-    {% endif %}
+
     <div id="loading" class="loading">Loading more movies...</div>
   </main>
 
-  <script>
-    const TMDB_API_KEY = "{{ TMDB_API_KEY }}"; // Passed from Flask
-  </script>
-  <script src="/static/js/script.js"></script>
+  <!-- FIXED: JS via url_for -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
