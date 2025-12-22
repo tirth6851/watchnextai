@@ -9,7 +9,7 @@
 </head>
 
 <body>
-  <!-- Navigation Bar -->
+  <!-- Top Navbar -->
   <nav class="navbar">
     <div class="logo">🎬 WatchNextAI</div>
 
@@ -27,31 +27,46 @@
     </div>
   </nav>
 
-  <!-- Main Section -->
-  <main>
-    <h2 class="section-title">🔥 Trending Movies</h2>
-
+  <!-- TikTok-style feed -->
+  <main class="feed">
     {% if error_message %}
       <p class="error-message">{{ error_message }}</p>
     {% endif %}
 
-    <div id="movie-container" class="movie-carousel">
+    <section id="movie-container" class="feed-container">
       {% for movie in movies %}
-        <div class="movie-card">
-          <a href="/movie/{{ movie.id }}">
+        <article class="feed-item movie-card" data-id="{{ movie.id }}">
+          <a class="poster-link" href="/movie/{{ movie.id }}" aria-label="Open {{ movie.title }}">
             <img
-              src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w300{{ movie.poster_path }}{% else %}https://via.placeholder.com/300x450?text=No+Image{% endif %}"
+              class="poster"
+              src="{% if movie.poster_path %}https://image.tmdb.org/t/p/w500{{ movie.poster_path }}{% else %}https://via.placeholder.com/500x750?text=No+Image{% endif %}"
               alt="{{ movie.title }}"
+              loading="lazy"
             />
           </a>
 
-          <div class="movie-info">
-            <h3>{{ movie.title }}</h3>
-            <p>⭐ {{ movie.vote_average }}</p>
+          <div class="overlay">
+            <div class="title-row">
+              <h2 class="movie-title">{{ movie.title }}</h2>
+              <div class="rating">⭐ {{ movie.vote_average }}</div>
+            </div>
+
+            {% if movie.release_date %}
+              <div class="meta">Released: {{ movie.release_date }}</div>
+            {% endif %}
+
+            {% if movie.overview %}
+              <p class="overview">{{ movie.overview }}</p>
+            {% endif %}
+
+            <div class="actions">
+              <a class="btn" href="/movie/{{ movie.id }}">Details</a>
+              <button class="btn btn-ghost" type="button" data-action="save">Save</button>
+            </div>
           </div>
-        </div>
+        </article>
       {% endfor %}
-    </div>
+    </section>
 
     {% if not movies %}
       <p class="empty-state">No movies available right now.</p>
