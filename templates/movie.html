@@ -8,11 +8,16 @@
 </head>
 <body>
   <header>
-    <h1>{{ movie.title }}</h1>
-    <p>⭐ Rating: {{ movie.vote_average }}</p>
+    <h1>{{ movie.title or "Movie details" }}</h1>
+    {% if movie.vote_average %}
+      <p>⭐ Rating: {{ movie.vote_average }}</p>
+    {% endif %}
   </header>
 
   <main>
+    {% if error_message %}
+      <div class="error-banner">{{ error_message }}</div>
+    {% endif %}
     {% if trailer_key %}
       <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ trailer_key }}" frameborder="0" allowfullscreen></iframe>
     {% else %}
@@ -20,10 +25,10 @@
     {% endif %}
 
     <h2>Overview</h2>
-    <p>{{ movie.overview }}</p>
+    <p>{{ movie.overview or "Overview not available." }}</p>
 
     <h2>Reviews</h2>
-    {% if movie.reviews.results %}
+    {% if movie.reviews and movie.reviews.results %}
       <ul>
         {% for review in movie.reviews.results %}
           <li><strong>{{ review.author }}:</strong> {{ review.content }}</li>

@@ -26,11 +26,18 @@
   <!-- Main Section -->
   <main>
     <h2 class="section-title">🔥 Trending Movies</h2>
+    {% if error_message %}
+      <div class="error-banner">{{ error_message }}</div>
+    {% endif %}
     <div id="movie-container" class="movie-carousel">
       {% for movie in movies %}
         <div class="movie-card">
           <a href="/movie/{{ movie.id }}">
-            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            {% if movie.poster_path %}
+              <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            {% else %}
+              <img src="/static/images/poster-placeholder.svg" alt="Poster not available">
+            {% endif %}
           </a>
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>

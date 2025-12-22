@@ -83,6 +83,17 @@ main {
   margin-bottom: 20px;
 }
 
+.error-banner {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  color: #b71c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 0 auto 16px;
+  max-width: 560px;
+  font-size: 0.95rem;
+}
+
 /* Vertical Movie List */
 .movie-carousel {
   display: flex;
