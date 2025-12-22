@@ -14,12 +14,18 @@ load_dotenv(dotenv_path=ENV_PATH)
 # ----------------------------
 # Flask App
 # ----------------------------
+
+
+
 app = Flask(
     __name__,
     template_folder=str(ROOT / "templates"),
     static_folder=str(ROOT / "static"),
     static_url_path="/static",
 )
+
+
+
 
 # ----------------------------
 # TMDB Config
