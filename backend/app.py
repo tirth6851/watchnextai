@@ -60,8 +60,8 @@ def home():
         sort_by="vote_average.desc
         include_adult="false",
         include_video="false",
-                primary_release_date_gte="1970-01-01",
-        vote_count_gte=500,
+                "primary_release_date.gte"="1970-01-01",
+        "vote_count.gte"=500,
     )
     movies = (data or {}).get("results", [])
 
@@ -133,9 +133,9 @@ def load_more():
             sort_by="vote_average.desc
             include_adult="false",
             include_video="false",
-                primary_release_date_gte="1970-01-01",
-                vote_count_gte=500,
-                    primary_release_date_gte="1970-01-01",
+                "primary_release_date.gte"="1970-01-01",
+                "vote_count.gte"=500,
+                    "primary_release_date.gte"="1970-01-01",
         vote_average.desc
         if err:
             return jsonify({"movies": [], "error": err}), 502
