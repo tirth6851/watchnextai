@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Movie Details • WatchNextAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        .chatbot-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+        }
+        .chatbot-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--bg);
+            border-radius: 0.5rem;
+        }
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            max-width: 80%;
+        }
+        .chat-message.user {
+            background: var(--primary);
+            color: white;
+            margin-left: auto;
+        }
+        .chat-message.bot {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text);
+            font-family: inherit;
+        }
+        .chat-send-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .chat-send-btn:hover {
+            opacity: 0.9;
+        }
+        .chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo">🎬</div>
+            <div class="brand-text">
+                <div class="brand-title">WatchNextAI</div>
+                <div class="brand-subtitle">Movie details</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <a class="pill-btn" href="/">← Back to discover</a>
+            <button id="themeToggle" class="pill-btn" type="button">
+                <span id="themeIcon">🌙</span>
+                <span id="themeLabel">Dark</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="detail">
+        <div id="loading" style="text-align: center; padding: 2rem;">Loading movie details...</div>
+        <div id="error" style="display: none; text-align: center; padding: 2rem; color: var(--error);"></div>
+        
+        <div id="movieContent" style="display: none;">
+            <div class="detail-grid">
+                <div class="detail-poster">
+                    <img id="posterImg" class="poster big" alt="Movie poster" />
+                </div>
+                <div class="detail-info">
+                    <div class="detail-header">
+                        <h1 id="movieTitle" class="detail-title"></h1>
+                        <p id="movieTagline" class="detail-tagline" style="display: none;"></p>
+                    </div>
+                    <div id="movieStats" class="detail-stats"></div>
+                    <p id="movieOverview" class="detail-overview"></p>
+                </div>
+            </div>
+
+            <!-- Chatbot Section -->
+            <div class="chatbot-container">
+                <div class="chatbot-header">
+                    <span>🤖</span>
+                    <span>Chat about this movie</span>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message bot">
+                        Hi! I'm here to discuss this movie with you. Ask me anything about the plot, characters, themes, or get recommendations for similar movies!
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        class="chat-input" 
+                        placeholder="Ask about the movie..."
+                        onkeypress="if(event.key==='Enter') sendMessage()"
+                    />
+                    <button id="chatSendBtn" class="chat-send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        const movieId = {{ movie_id }};
+        let movieData = null;
+
+        // Fetch movie details
+        async function loadMovieDetails() {
+            try {
+                const response = await fetch(`/api/movie/${movieId}`);
+                if (!response.ok) throw new Error('Failed to load movie');
+                
+                movieData = await response.json();
+                displayMovie(movieData);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('movieContent').style.display = 'block';
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Failed to load movie details. Please try again.';
+            }
+        }
+
+        function displayMovie(movie) {
+            // Poster
+            const posterImg = document.getElementById('posterImg');
+            posterImg.src = movie.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : 'https://via.placeholder.com/500x750?text=No+Image';
+            posterImg.alt = movie.title;
+
+            // Title
+            document.getElementById('movieTitle').textContent = movie.title || 'Untitled';
+            
+            // Tagline
+            if (movie.tagline) {
+                const tagline = document.getElementById('movieTagline');
+                tagline.textContent = movie.tagline;
+                tagline.style.display = 'block';
+            }
+
+            // Stats
+            const stats = document.getElementById('movieStats');
+            let statsHTML = '';
+            if (movie.vote_average) {
+                statsHTML += `<span class="chip">⭐ ${movie.vote_average.toFixed(1)}</span>`;
+            }
+            if (movie.release_date) {
+                statsHTML += `<span class="chip">${movie.release_date}</span>`;
+            }
+            if (movie.runtime) {
+                statsHTML += `<span class="chip">${movie.runtime} min</span>`;
+            }
+            if (movie.genres && movie.genres.length > 0) {
+                const genreNames = movie.genres.map(g => g.name).join(', ');
+                statsHTML += `<span class="chip">${genreNames}</span>`;
+            }
+            stats.innerHTML = statsHTML;
+
+            // Overview
+            document.getElementById('movieOverview').textContent = movie.overview || 'No overview available.';
+        }
+
+        // Chatbot functionality
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('chatSendBtn');
+            const message = input.value.trim();
+            
+            if (!message || !movieData) return;
+
+            // Display user message
+            addMessage(message, 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        movie_title: movieData.title,
+                        movie_overview: movieData.overview,
+                        message: message
+                    })
+                });
+
+                if (!response.ok) throw new Error('Chat failed');
+                
+                const data = await response.json();
+                addMessage(data.response, 'bot');
+            } catch (error) {
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            messageDiv.textContent = text;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Load movie on page load
+        loadMovieDetails();
+    </script>
+</body>
+</html>
