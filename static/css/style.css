@@ -215,7 +215,7 @@ a {
   font-size: 0.82rem;
 }
 
-.grid {
+.grid, #movie-container {
   margin-top: 22px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -390,7 +390,7 @@ a {
 }
 
 @media (max-width: 1200px) {
-  .grid {
+  .grid, #movie-container {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -401,7 +401,7 @@ a {
     white-space: nowrap;
     flex-wrap: nowrap;
   }
-  .grid {
+  .grid, #movie-container {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -424,7 +424,7 @@ a {
 }
 
 @media (max-width: 640px) {
-  .grid {
+  .grid, #movie-container {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .nav-brand {
@@ -433,7 +433,7 @@ a {
 }
 
 @media (max-width: 480px) {
-  .grid {
+  .grid, #movie-container {
     grid-template-columns: 1fr;
   }
 }
