@@ -119,7 +119,7 @@ async function fetchMovies(page) {
     params.set("q", state.currentQuery);
   }
 
-  const response = await fetch(`/load_more?${params.toString()}`);
+  const response = await fetch(`/api/movies?${params.toString()}`);
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
