@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
+from groq import Groq
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env"
@@ -18,6 +19,13 @@ app = Flask(
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 REQUEST_TIMEOUT = 10
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Initialize Groq client
+if GROQ_API_KEY:
+    groq_client = Groq(api_key=GROQ_API_KEY)
+else:
+    groq_client = None
 
 MOVIE_ENDPOINTS = {
     "trending": "/trending/movie/week",
@@ -39,115 +47,119 @@ def tmdb_get(path: str, **params):
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json(), None
-    except requests.RequestException as exc:
-        return None, str(exc)
+    except requests.exceptions.Timeout:
+        return None, "Request timed out."
+    except requests.exceptions.RequestException as e:
+        return None, str(e)
 
 
 @app.route("/")
-def home():
-    if not TMDB_API_KEY:
-        return render_template(
-            "index.html",
-            movies=[],
-            error_message=(
-                "Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy)."
-            ),
-        )
-
-    data, err = tmdb_get(
-        "/discover/movie",
-        page=1,
-        sort_by="vote_average.desc
-        include_adult="false",
-        include_video="false",
-                "primary_release_date.gte"="1970-01-01",
-        "vote_count.gte"=500,
-    )
-    movies = (data or {}).get("results", [])
-
-    return render_template("index.html", movies=movies, error_message=err)
+def index():
+    return render_template("index.html")
 
 
-@app.route("/movie/<int:movie_id>")
-def movie_details(movie_id: int):
-    if not TMDB_API_KEY:
-        return render_template(
-            "movie.html",
-            movie={},
-            trailer_key=None,
-            error_message=(
-                "Missing TMDB_API_KEY. Add it to .env (local) or Vercel env vars (deploy)."
-            ),
-        )
+@app.route("/api/movies")
+def get_movies():
+    category = request.args.get("category", "popular")
+    page = request.args.get("page", 1, type=int)
 
-    data, err = tmdb_get(f"/movie/{movie_id}", append_to_response="videos")
-    if err:
-        return render_template("movie.html", movie={}, trailer_key=None, error_message=err)
+    if category == "search":
+        query = request.args.get("query", "")
+        if not query:
+            return jsonify({"movies": [], "error": "No query provided."}), 400
 
-    trailer_key = None
-    videos = (data or {}).get("videos", {}).get("results", [])
-    for video in videos:
-        if video.get("site") == "YouTube" and video.get("type") == "Trailer":
-            trailer_key = video.get("key")
-            break
-
-    return render_template(
-        "movie.html",
-        movie=data or {},
-        trailer_key=trailer_key,
-        error_message=None,
-    )
-
-
-@app.route("/load_more")
-def load_more():
-    if not TMDB_API_KEY:
-        return jsonify({"movies": [], "error": "Missing TMDB_API_KEY."}), 400
-
-    category = (request.args.get("category", "discover") or "discover").strip()
-    q = (request.args.get("q", "") or "").strip()
-
-    try:
-        page = int(request.args.get("page", 1))
-    except ValueError:
-        return jsonify({"movies": [], "error": "Invalid page."}), 400
-
-    if page < 1 or page > 500:
-        return jsonify({"movies": [], "error": "Page out of range (1..500)."}), 400
-
-    if q:
         data, err = tmdb_get(
             "/search/movie",
-            query=q,
+            query=query,
             page=page,
             include_adult="false",
         )
+
         if err:
             return jsonify({"movies": [], "error": err}), 502
+
         return jsonify({"movies": (data or {}).get("results", [])})
 
     if category == "discover":
         data, err = tmdb_get(
             "/discover/movie",
             page=page,
-            sort_by="vote_average.desc
+            sort_by="vote_average.desc",
             include_adult="false",
             include_video="false",
-                "primary_release_date.gte"="1970-01-01",
-                "vote_count.gte"=500,
-                    "primary_release_date.gte"="1970-01-01",
-        vote_average.desc
+            vote_average=".desc",
+        )
         if err:
             return jsonify({"movies": [], "error": err}), 502
+
         return jsonify({"movies": (data or {}).get("results", [])})
 
     if category in MOVIE_ENDPOINTS:
         data, err = tmdb_get(MOVIE_ENDPOINTS[category], page=page)
+
         if err:
             return jsonify({"movies": [], "error": err}), 502
+
         return jsonify({"movies": (data or {}).get("results", [])})
 
     return jsonify({"movies": [], "error": "Unknown category."}), 400
+
+
+@app.route("/api/movie/<int:movie_id>")
+def get_movie_details(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}")
+
+    if err:
+        return jsonify({"error": err}), 502
+
+    return jsonify(data or {})
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    if not groq_client:
+        return jsonify({"error": "Chatbot service not available. GROQ_API_KEY not configured."}), 503
+    
+    try:
+        data = request.get_json()
+        movie_title = data.get("movie_title", "")
+        movie_overview = data.get("movie_overview", "")
+        user_message = data.get("message", "")
+        
+        if not user_message:
+            return jsonify({"error": "No message provided."}), 400
+        
+        # Create context-aware prompt
+        system_prompt = f"""You are a friendly movie discussion assistant. You're currently discussing the movie '{movie_title}'. 
+        
+Movie Overview: {movie_overview}
+        
+Help users by:
+- Answering questions about the movie
+- Discussing themes, characters, and plot points
+- Providing insights and analysis
+- Recommending similar movies
+- Being conversational and engaging
+
+Keep responses concise (2-3 paragraphs max) and friendly."""
+        
+        # Call Groq API
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        response_text = chat_completion.choices[0].message.content
+        
+        return jsonify({"response": response_text})
+        
+    except Exception as e:
+        return jsonify({"error": f"Chat error: {str(e)}"}), 500
 
 
 @app.route("/health")
