@@ -58,6 +58,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/movie/<int:movie_id>")
+def movie_detail(movie_id):
+    return render_template("movie_detail.html", movie_id=movie_id)
+
+
 @app.route("/api/movies")
 def get_movies():
     category = request.args.get("category", "popular")
