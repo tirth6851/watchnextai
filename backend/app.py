@@ -60,6 +60,7 @@ def home():
         sort_by="popularity.desc",
         include_adult="false",
         include_video="false",
+                primary_release_date_gte="1970-01-01",
     )
     movies = (data or {}).get("results", [])
 
@@ -131,6 +132,7 @@ def load_more():
             sort_by="popularity.desc",
             include_adult="false",
             include_video="false",
+                    primary_release_date_gte="1970-01-01",
         )
         if err:
             return jsonify({"movies": [], "error": err}), 502
