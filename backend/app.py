@@ -120,6 +120,23 @@ def get_movie_details(movie_id):
     return jsonify(data or {})
 
 
+@app.route("/api/movie/<int:movie_id>/trailer")
+def get_movie_trailer(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}/videos")
+
+    if err:
+        return jsonify({"error": err}), 502
+
+    # Find YouTube trailer
+    videos = (data or {}).get("results", [])
+    trailer = next((v for v in videos if v.get("type") == "Trailer" and v.get("site") == "YouTube"), None)
+    
+    if trailer:
+        return jsonify({"key": trailer.get("key")})
+    
+    return jsonify({"key": None})
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     if not groq_client:
