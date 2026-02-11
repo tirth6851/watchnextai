@@ -98,6 +98,9 @@ a {
   .content-type-tabs {
   display: flex;
   gap: 8px;
+        flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
   margin-bottom: 16px;
   padding: 4px;
   background: var(--card-bg);
@@ -107,6 +110,7 @@ a {
 
 .content-type-btn {
   padding: 10px 20px;
+      white-space: nowrap;
   background: transparent;
   color: var(--muted);
   border: none;
