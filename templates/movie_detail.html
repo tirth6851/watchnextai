@@ -77,6 +77,32 @@
 </head>
 <body>
     <nav class="navbar">
+                .trailer-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .trailer-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.5rem;
+        }
+        .trailer-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
         <div class="nav-brand">
             <div class="logo">🎬</div>
             <div class="brand-text">
@@ -115,6 +141,23 @@
             <!-- Chatbot Section -->
             <div class="chatbot-container">
                 <div class="chatbot-header">
+
+                                <!-- Trailer Section -->
+            <section class="trailer-section" id="trailerSection" style="display: none;">
+                <h2 class="section-title">🎬 Trailer</h2>
+                <div class="trailer-container">
+                    <iframe 
+                        id="trailerIframe"
+                        width="100%" 
+                        height="500" 
+                        src="" 
+                        title="Movie Trailer" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            </section>
                     <span>🤖</span>
                     <span>Chat about this movie</span>
                 </div>
@@ -154,6 +197,7 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('movieContent').style.display = 'block';
             } catch (error) {
+                                loadTrailer();
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
                 document.getElementById('error').textContent = 'Failed to load movie details. Please try again.';
@@ -204,6 +248,27 @@
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const sendBtn = document.getElementById('chatSendBtn');
+                    // Load trailer
+        async function loadTrailer() {
+            try {
+                const response = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key={{ TMDB_API_KEY }}`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const trailer = data.results.find(video => video.type === 'Trailer' && video.site === 'YouTube');
+                
+                if (trailer) {
+                    const trailerSection = document.getElementById('trailerSection');
+                    const trailerIframe = document.getElementById('trailerIframe');
+                    
+                    trailerIframe.src = `https://www.youtube.com/embed/${trailer.key}`;
+                    trailerSection.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to load trailer:', error);
+            }
+        }
+
             const message = input.value.trim();
             
             if (!message || !movieData) return;
