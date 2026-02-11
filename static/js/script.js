@@ -114,10 +114,9 @@ function renderMovieCard(movie) {
 }
 
 async function fetchMovies(page) {
-  const params = new URLSearchParams({ page: String(page), category: state.currentCategory });
-  if (state.currentQuery) {
-    params.set("q", state.currentQuery);
-  }
+  const category = state.currentQuery ? "search" : state.currentCategory;
+  const params = new URLSearchParams({ page: String(page), category });  if (state.currentQuery) {
+    params.set("query", state.currentQuery);  }
 
   const response = await fetch(`/api/movies?${params.toString()}`);
   if (!response.ok) {
