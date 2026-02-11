@@ -518,3 +518,51 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Legal Pages Styling */
+.legal-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--card-bg);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+}
+
+.legal-container h1 {
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.legal-container .last-updated {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+}
+
+.legal-container section {
+    margin-bottom: 2rem;
+}
+
+.legal-container h2 {
+    color: var(--fg);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.legal-container p {
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 1rem;
+}
+
+.legal-container ul {
+    margin-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.legal-container li {
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
