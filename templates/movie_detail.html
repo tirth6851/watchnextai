@@ -251,12 +251,10 @@
                     // Load trailer
         async function loadTrailer() {
             try {
-                const response = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key={{ TMDB_API_KEY }}`);
-                if (!response.ok) return;
+                const response = await fetch(`/api/movie/${movieId}/trailer`);                if (!response.ok) return;
                 
                 const data = await response.json();
-                const trailer = data.results.find(video => video.type === 'Trailer' && video.site === 'YouTube');
-                
+                const trailer = data.key;                
                 if (trailer) {
                     const trailerSection = document.getElementById('trailerSection');
                     const trailerIframe = document.getElementById('trailerIframe');
