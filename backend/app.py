@@ -93,9 +93,16 @@ def get_movies():
 
         if err:
             return jsonify({"movies": [], "error": err}), 502
-
-        return jsonify({"movies": (data or {}).get("results", [])})
-
+        
+        # Filter out low-quality movies
+        results = (data or {}).get("results", [])
+        filtered_movies = [
+            movie for movie in results 
+            if movie.get("vote_count", 0) > 50 or movie.get("popularity", 0) > 5
+        ]
+        return jsonify({"movies": filtered_movies})
+            
+        
     if category == "discover":
         data, err = tmdb_get(
             "/discover/movie",
@@ -103,7 +110,8 @@ def get_movies():
             sort_by="vote_average.desc",
             include_adult="false",
             include_video="false",
-            vote_average=".desc",
+            "vote_count.gte": 50,  # Only movies with 50+ votes
+            "with_original_language": "en",  # English movies for better quality
         )
         if err:
             return jsonify({"movies": [], "error": err}), 502
