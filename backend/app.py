@@ -110,9 +110,7 @@ def get_movies():
             sort_by="vote_average.desc",
             include_adult="false",
             include_video="false",
-            "vote_count.gte": 50,  # Only movies with 50+ votes
-            "with_original_language": "en",  # English movies for better quality
-        )
+            **{"vote_count.gte": 50, "with_original_language": "en"},  # Filter high-quality movies        )
         if err:
             return jsonify({"movies": [], "error": err}), 502
 
