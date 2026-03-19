@@ -54,12 +54,14 @@ function _applyAuthMode(isSignUp) {
   const toggleTx = document.getElementById('authToggleText');
   const toggleBt = document.getElementById('authToggleBtn');
   const strength = document.getElementById('strengthContainer');
+  const nameField = document.getElementById('nameField');
 
   if (title)    title.textContent    = isSignUp ? 'Create Account'        : 'Welcome Back';
   if (submit)   submit.textContent   = isSignUp ? 'Create Account'        : 'Sign In';
   if (toggleTx) toggleTx.textContent = isSignUp ? 'Already have an account?' : "Don't have an account?";
   if (toggleBt) toggleBt.textContent = isSignUp ? 'Sign In'              : 'Sign Up';
   if (strength) strength.style.display = isSignUp ? 'block' : 'none';
+  if (nameField) nameField.style.display = isSignUp ? 'block' : 'none';
 
   const passInput = document.getElementById('authPassword');
   if (passInput) passInput.autocomplete = isSignUp ? 'new-password' : 'current-password';
@@ -145,10 +147,12 @@ function _setLoading(loading) {
 async function handleAuthSubmit() {
   const emailInput = document.getElementById('authEmail');
   const passInput  = document.getElementById('authPassword');
+  const nameInput  = document.getElementById('authName');
   const errEl      = document.getElementById('authError');
 
-  const email    = (emailInput?.value || '').trim();
-  const password = passInput?.value || '';
+  const email       = (emailInput?.value || '').trim();
+  const password    = passInput?.value || '';
+  const displayName = (nameInput?.value || '').trim();
 
   if (errEl) errEl.textContent = '';
 
@@ -180,7 +184,7 @@ async function handleAuthSubmit() {
 
   try {
     const result = _authIsSignUp
-      ? await signUp(email, password)
+      ? await signUp(email, password, displayName || undefined)
       : await signIn(email, password);
 
     if (result.success) {
@@ -209,23 +213,41 @@ async function handleAuthSubmit() {
   }
 }
 
-// ─── Auth UI (navbar button) ──────────────────────────────────────────────────
+// ─── Auth UI (navbar button + greeting) ──────────────────────────────────────
 async function updateAuthUI() {
   try {
     const session = await checkAuth();
-    const btn = document.getElementById('authBtn');
-    if (!btn) return;
+    const btn      = document.getElementById('authBtn');
+    const greeting = document.getElementById('authGreeting');
+    const profileBtn = document.getElementById('profileBtn');
 
     if (session) {
-      btn.textContent = 'Sign Out';
-      btn.onclick = async function () {
-        await signOut();
-        updateAuthUI();
-        window.showToast('Signed out successfully.');
-      };
+      // Greeting
+      const name = session.user?.user_metadata?.full_name
+        || session.user?.email?.split('@')[0]
+        || 'there';
+      if (greeting) {
+        greeting.textContent = `Hi, ${name}! 👋`;
+        greeting.style.display = 'inline';
+      }
+      if (profileBtn) profileBtn.style.display = 'inline-flex';
+
+      // Auth button → Sign Out
+      if (btn) {
+        btn.textContent = 'Sign Out';
+        btn.onclick = async function () {
+          await signOut();
+          updateAuthUI();
+          window.showToast('Signed out successfully.');
+        };
+      }
     } else {
-      btn.textContent = 'Sign In';
-      btn.onclick = openAuthModal;
+      if (greeting) greeting.style.display = 'none';
+      if (profileBtn) profileBtn.style.display = 'none';
+      if (btn) {
+        btn.textContent = 'Sign In';
+        btn.onclick = openAuthModal;
+      }
     }
   } catch (err) {
     console.error('updateAuthUI error:', err);

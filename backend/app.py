@@ -379,6 +379,10 @@ def send_welcome_email():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
 @app.route('/terms')
 def terms():
     return render_template('terms.html')

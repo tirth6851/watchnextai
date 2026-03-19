@@ -12,17 +12,16 @@ async function checkAuth() {
 }
 
 // Sign up new user
-async function signUp(email, password) {
-    const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-    });
-    
+async function signUp(email, password, displayName) {
+    const opts = { email, password };
+    if (displayName) opts.options = { data: { full_name: displayName } };
+    const { data, error } = await supabase.auth.signUp(opts);
+
     if (error) {
         console.error('Sign up error:', error);
         return { success: false, error: error.message };
     }
-    
+
     return { success: true, user: data.user };
 }
 
@@ -141,6 +140,27 @@ async function markAsWatched(mediaId, mediaType, title, rating) {
         return { success: false, error: error.message };
     }
     
+    return { success: true };
+}
+
+// Remove from watched
+async function removeFromWatched(mediaId) {
+    const session = await checkAuth();
+    if (!session) {
+        return { success: false, error: 'Not authenticated' };
+    }
+
+    const { error } = await supabase
+        .from('watched')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('media_id', mediaId);
+
+    if (error) {
+        console.error('Remove from watched error:', error);
+        return { success: false, error: error.message };
+    }
+
     return { success: true };
 }
 
