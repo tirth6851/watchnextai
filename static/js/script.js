@@ -149,33 +149,35 @@ function handleGenreClick(event) {
 
 function updateHeader() {
   if (!pageTitle || !pageHint) return;
+  let title = "";
   if (state.isGlobalSearch && state.currentQuery) {
     pageTitle.textContent = `🔎 Results for "${state.currentQuery}"`;
     pageHint.textContent = "Searching across movies, TV shows and anime.";
-    return;
-  }
-  if (state.currentQuery) {
+    title = `Search: ${state.currentQuery}`;
+  } else if (state.currentQuery) {
     pageTitle.textContent = `🔎 Results for "${state.currentQuery}"`;
     pageHint.textContent = "Searching the full library.";
-    return;
-  }
-  if (state.currentGenre) {
+    title = `Search: ${state.currentQuery}`;
+  } else if (state.currentGenre) {
     const chip = document.querySelector(`.genre-chip[data-genre="${state.currentGenre}"]`);
     const label = chip ? chip.textContent.trim() : state.currentGenre;
     pageTitle.textContent = `🎭 ${label}`;
     pageHint.textContent = "Filtered by genre.";
-    return;
-  }
-  if (state.currentContentType === "movies") {
+    title = label;
+  } else if (state.currentContentType === "movies") {
     pageTitle.textContent = movieTitles[state.currentCategory] || "Movies";
     pageHint.textContent = movieHints[state.currentCategory] || "Browse the library.";
+    title = (movieTitles[state.currentCategory] || "Movies").replace(/^\S+\s/, "");
   } else if (state.currentContentType === "tv") {
     pageTitle.textContent = tvTitles[state.currentCategory] || "TV Shows";
     pageHint.textContent = tvHints[state.currentCategory] || "Browse TV shows.";
+    title = (tvTitles[state.currentCategory] || "TV Shows").replace(/^\S+\s/, "");
   } else {
     pageTitle.textContent = "🎌 Anime";
     pageHint.textContent = "Top anime from MyAnimeList.";
+    title = "Anime";
   }
+  if (title) document.title = `WatchNextAI • ${title}`;
 }
 
 // ---- 3D Tilt effect ----

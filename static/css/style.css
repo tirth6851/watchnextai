@@ -1418,3 +1418,16 @@ html[data-theme="light"] .dynamic-bg {
 .home-card:hover .home-card__reason {
   opacity: 1;
 }
+
+/* Home button on browse page */
+.pill-btn--home {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.pill-btn--home:hover {
+  background: var(--accent);
+  color: #fff;
+}
