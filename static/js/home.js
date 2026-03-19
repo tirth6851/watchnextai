@@ -134,8 +134,52 @@ async function loadHeroBg() {
   } catch (_) {}
 }
 
+// ---- Mixed card (for recommendations which already have media_type) ----
+function makeMixedCard(item) {
+  if (item.media_type === "tv") return makeTvCard(item);
+  return makeMovieCard(item);
+}
+
+// ---- Personalised "Because you watched" row ----
+async function loadRecommendations() {
+  if (!supabase) return;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+
+  // Fetch the most recently watched movie or TV item (anime not supported by TMDB recs)
+  const { data: watched, error } = await supabase
+    .from("watched")
+    .select("media_id, media_type, title")
+    .eq("user_id", session.user.id)
+    .in("media_type", ["movie", "tv"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error || !watched || watched.length === 0) return;
+
+  const seed = watched[0];
+
+  const resp = await fetch(`/api/recommendations?media_type=${seed.media_type}&media_id=${seed.media_id}`);
+  if (!resp.ok) return;
+  const data = await resp.json();
+  const items = (data.results || []).slice(0, 20);
+  if (!items.length) return;
+
+  const section = document.getElementById("recsSection");
+  const title = document.getElementById("recsTitle");
+  const row = document.getElementById("recsRow");
+  if (!section || !title || !row) return;
+
+  title.textContent = `✨ Because you watched "${seed.title}"`;
+  row.innerHTML = "";
+  items.forEach((item) => row.appendChild(makeMixedCard(item)));
+  section.style.display = "";
+}
+
 // ---- Init ----
 loadHeroBg();
+loadRecommendations();
 populateRow("trendingMoviesRow", "/api/movies?category=trending&page=1", makeMovieCard, "movies");
 populateRow("trendingTvRow", "/api/tv_shows?category=trending&page=1", makeTvCard, "shows");
 populateRow("topAnimeRow", "/api/anime?category=top&page=1", makeAnimeCard, "anime");

@@ -318,6 +318,36 @@ def get_anime_details(anime_id):
         return jsonify({"error": str(e)}), 502
 
 
+@app.route("/api/recommendations")
+def get_recommendations():
+    media_type = request.args.get("media_type", "movie")
+    media_id = request.args.get("media_id", type=int)
+    page = request.args.get("page", 1, type=int)
+
+    if not media_id:
+        return jsonify({"results": [], "error": "media_id required"}), 400
+
+    if media_type == "movie":
+        data, err = tmdb_get(f"/movie/{media_id}/recommendations", page=page)
+        if err:
+            return jsonify({"results": [], "error": err}), 502
+        results = (data or {}).get("results", [])
+        for r in results:
+            r["media_type"] = "movie"
+        return jsonify({"results": results})
+
+    if media_type == "tv":
+        data, err = tmdb_get(f"/tv/{media_id}/recommendations", page=page)
+        if err:
+            return jsonify({"results": [], "error": err}), 502
+        results = (data or {}).get("results", [])
+        for r in results:
+            r["media_type"] = "tv"
+        return jsonify({"results": results})
+
+    return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
+
+
 @app.route("/api/search")
 def global_search():
     query = request.args.get("query", "").strip()
