@@ -247,6 +247,17 @@ def get_tv_details(tv_id):
         return jsonify({"error": err}), 502
     return jsonify(data or {})
 
+@app.route("/api/tv/<int:tv_id>/trailer")
+def get_tv_trailer(tv_id):
+    data, err = tmdb_get(f"/tv/{tv_id}/videos")
+    if err:
+        return jsonify({"error": err}), 502
+    videos = (data or {}).get("results", [])
+    trailer = next((v for v in videos if v.get("type") == "Trailer" and v.get("site") == "YouTube"), None)
+    if trailer:
+        return jsonify({"key": trailer.get("key")})
+    return jsonify({"key": None})
+
 # Anime routes
 @app.route("/anime/<int:anime_id>")
 def anime_detail(anime_id):

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Movie Details • WatchNextAI</title>
+    <title>TV Show Details • WatchNextAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
     <style>
         .detail-actions {
@@ -59,7 +59,6 @@
         }
         .chat-send-btn:hover { opacity: 0.9; }
         .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        /* Auth Modal */
         .modal-overlay {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
             z-index: 100; place-items: center;
@@ -89,10 +88,10 @@
 <body>
     <nav class="navbar">
         <div class="nav-brand">
-            <div class="logo">🎬</div>
+            <div class="logo">📺</div>
             <div class="brand-text">
                 <div class="brand-title">WatchNextAI</div>
-                <div class="brand-subtitle">Movie details</div>
+                <div class="brand-subtitle">TV Show details</div>
             </div>
         </div>
         <div class="nav-actions">
@@ -106,21 +105,21 @@
     </nav>
 
     <main class="detail">
-        <div id="loading" style="text-align: center; padding: 2rem;">Loading movie details...</div>
+        <div id="loading" style="text-align: center; padding: 2rem;">Loading TV show details...</div>
         <div id="error" style="display: none; text-align: center; padding: 2rem; color: #ef4444;"></div>
 
-        <div id="movieContent" style="display: none;">
+        <div id="showContent" style="display: none;">
             <div class="detail-grid">
                 <div class="detail-poster">
-                    <img id="posterImg" class="poster big" alt="Movie poster" />
+                    <img id="posterImg" class="poster big" alt="Show poster" />
                 </div>
                 <div class="detail-info">
                     <div class="detail-header">
-                        <h1 id="movieTitle" class="detail-title"></h1>
-                        <p id="movieTagline" class="detail-tagline" style="display: none;"></p>
+                        <h1 id="showTitle" class="detail-title"></h1>
+                        <p id="showTagline" class="detail-tagline" style="display: none;"></p>
                     </div>
-                    <div id="movieStats" class="detail-stats"></div>
-                    <p id="movieOverview" class="detail-overview"></p>
+                    <div id="showStats" class="detail-stats"></div>
+                    <p id="showOverview" class="detail-overview"></p>
                     <div class="detail-actions">
                         <button id="watchlistBtn" class="action-btn" onclick="toggleWatchlist()">+ Add to Watchlist</button>
                         <button id="watchedBtn" class="action-btn" onclick="markWatched()">✓ Mark as Watched</button>
@@ -131,7 +130,7 @@
             <!-- Trailer Section -->
             <div class="trailer-block" id="trailerBlock" style="display: none;">
                 <h2>🎬 Trailer</h2>
-                <iframe id="trailerIframe" src="" title="Movie Trailer"
+                <iframe id="trailerIframe" src="" title="Show Trailer"
                     frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
@@ -141,16 +140,16 @@
             <div class="chatbot-container">
                 <div class="chatbot-header">
                     <span>🤖</span>
-                    <span>Chat about this movie</span>
+                    <span>Chat about this show</span>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-message bot">
-                        Hi! I'm here to discuss this movie with you. Ask me anything about the plot, characters, themes, or get recommendations for similar movies!
+                        Hi! I'm here to discuss this TV show with you. Ask me about the plot, characters, seasons, or get recommendations for similar shows!
                     </div>
                 </div>
                 <div class="chat-input-container">
                     <input type="text" id="chatInput" class="chat-input"
-                        placeholder="Ask about the movie..."
+                        placeholder="Ask about the show..."
                         onkeypress="if(event.key==='Enter') sendMessage()" />
                     <button id="chatSendBtn" class="chat-send-btn" onclick="sendMessage()">Send</button>
                 </div>
@@ -186,12 +185,11 @@
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
-        const movieId = {{ movie_id }};
-        let movieData = null;
+        const tvId = {{ tv_id }};
+        let showData = null;
         let isSignUp = false;
         let inWatchlist = false;
 
-        // Theme
         (function() {
             const saved = localStorage.getItem('wn_theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
@@ -202,7 +200,6 @@
         const toggle = document.getElementById('themeToggle');
         if (toggle) toggle.addEventListener('click', toggleTheme);
 
-        // Auth UI helpers
         function openAuthModal() { document.getElementById('authModal').classList.add('open'); }
         function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); document.getElementById('authError').textContent = ''; }
         function toggleAuthMode() {
@@ -240,17 +237,16 @@
             }
         }
 
-        // Watchlist / Watched
         async function toggleWatchlist() {
             const session = await checkAuth();
             if (!session) { showToast('Sign in to use watchlist.'); openAuthModal(); return; }
             const btn = document.getElementById('watchlistBtn');
             if (inWatchlist) {
-                const result = await removeFromWatchlist(movieId);
+                const result = await removeFromWatchlist(tvId);
                 if (result.success) { inWatchlist = false; btn.textContent = '+ Add to Watchlist'; btn.classList.remove('active'); showToast('Removed from watchlist.'); }
                 else showToast(result.error || 'Error updating watchlist.', 'error');
             } else {
-                const result = await addToWatchlist(movieId, 'movie', movieData?.title, movieData?.poster_path);
+                const result = await addToWatchlist(tvId, 'tv', showData?.name, showData?.poster_path);
                 if (result.success) { inWatchlist = true; btn.textContent = '✓ In Watchlist'; btn.classList.add('active'); showToast('Added to watchlist!'); }
                 else showToast(result.error || 'Error updating watchlist.', 'error');
             }
@@ -258,12 +254,11 @@
         async function markWatched() {
             const session = await checkAuth();
             if (!session) { showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const result = await markAsWatched(movieId, 'movie', movieData?.title, null);
+            const result = await markAsWatched(tvId, 'tv', showData?.name, null);
             if (result.success) { document.getElementById('watchedBtn').classList.add('active'); showToast('Marked as watched!'); }
             else showToast(result.error || 'Error saving watched status.', 'error');
         }
 
-        // Toast
         function showToast(message, variant) {
             const t = document.getElementById('toast');
             if (!t) return;
@@ -273,53 +268,52 @@
             setTimeout(() => t.classList.remove('show'), 3500);
         }
 
-        // Fetch movie details
-        async function loadMovieDetails() {
+        async function loadShowDetails() {
             try {
-                const response = await fetch(`/api/movie/${movieId}`);
-                if (!response.ok) throw new Error('Failed to load movie');
-                movieData = await response.json();
-                displayMovie(movieData);
+                const response = await fetch(`/api/tv/${tvId}`);
+                if (!response.ok) throw new Error('Failed to load show');
+                showData = await response.json();
+                displayShow(showData);
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('movieContent').style.display = 'block';
+                document.getElementById('showContent').style.display = 'block';
                 loadTrailer();
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
-                document.getElementById('error').textContent = 'Failed to load movie details. Please try again.';
+                document.getElementById('error').textContent = 'Failed to load TV show details. Please try again.';
             }
         }
 
-        function displayMovie(movie) {
+        function displayShow(show) {
             const posterImg = document.getElementById('posterImg');
-            posterImg.src = movie.poster_path
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            posterImg.src = show.poster_path
+                ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
                 : 'https://via.placeholder.com/500x750?text=No+Image';
-            posterImg.alt = movie.title;
+            posterImg.alt = show.name;
 
-            document.getElementById('movieTitle').textContent = movie.title || 'Untitled';
+            document.getElementById('showTitle').textContent = show.name || 'Untitled';
 
-            if (movie.tagline) {
-                const tagline = document.getElementById('movieTagline');
-                tagline.textContent = movie.tagline;
+            if (show.tagline) {
+                const tagline = document.getElementById('showTagline');
+                tagline.textContent = show.tagline;
                 tagline.style.display = 'block';
             }
 
-            const stats = document.getElementById('movieStats');
+            const stats = document.getElementById('showStats');
             let statsHTML = '';
-            if (movie.vote_average) statsHTML += `<span class="chip">⭐ ${movie.vote_average.toFixed(1)}</span>`;
-            if (movie.release_date) statsHTML += `<span class="chip">${movie.release_date}</span>`;
-            if (movie.runtime) statsHTML += `<span class="chip">${movie.runtime} min</span>`;
-            if (movie.genres?.length) statsHTML += `<span class="chip">${movie.genres.map(g => g.name).join(', ')}</span>`;
+            if (show.vote_average) statsHTML += `<span class="chip">⭐ ${show.vote_average.toFixed(1)}</span>`;
+            if (show.first_air_date) statsHTML += `<span class="chip">${show.first_air_date.slice(0,4)}</span>`;
+            if (show.number_of_seasons) statsHTML += `<span class="chip">${show.number_of_seasons} Season${show.number_of_seasons > 1 ? 's' : ''}</span>`;
+            if (show.episode_run_time?.length) statsHTML += `<span class="chip">~${show.episode_run_time[0]} min/ep</span>`;
+            if (show.genres?.length) statsHTML += `<span class="chip">${show.genres.map(g => g.name).join(', ')}</span>`;
             stats.innerHTML = statsHTML;
 
-            document.getElementById('movieOverview').textContent = movie.overview || 'No overview available.';
+            document.getElementById('showOverview').textContent = show.overview || 'No overview available.';
         }
 
-        // Load trailer
         async function loadTrailer() {
             try {
-                const response = await fetch(`/api/movie/${movieId}/trailer`);
+                const response = await fetch(`/api/tv/${tvId}/trailer`);
                 if (!response.ok) return;
                 const data = await response.json();
                 const trailerKey = data.key;
@@ -332,12 +326,11 @@
             }
         }
 
-        // Chatbot
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const sendBtn = document.getElementById('chatSendBtn');
             const message = input.value.trim();
-            if (!message || !movieData) return;
+            if (!message || !showData) return;
 
             addMessage(message, 'user');
             input.value = '';
@@ -348,8 +341,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        movie_title: movieData.title,
-                        movie_overview: movieData.overview,
+                        movie_title: showData.name,
+                        movie_overview: showData.overview,
                         message: message
                     })
                 });
@@ -373,7 +366,7 @@
         }
 
         updateAuthUI();
-        loadMovieDetails();
+        loadShowDetails();
     </script>
 </body>
 </html>

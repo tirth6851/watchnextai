@@ -5,8 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WatchNextAI • Discover Movies</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <style>
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 100; place-items: center;
+    }
+    .modal-overlay.open { display: grid; }
+    .modal {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 1rem; padding: 2rem; width: 100%; max-width: 400px;
+    }
+    .modal h2 { margin: 0 0 1.5rem; font-size: 1.4rem; }
+    .modal-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .modal-field label { font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+    .modal-field input {
+      padding: 0.65rem 1rem; background: var(--card);
+      border: 1px solid var(--border); border-radius: 0.5rem; color: var(--fg); font-family: inherit;
+    }
+    .modal-submit {
+      width: 100%; padding: 0.75rem; background: var(--accent); color: white;
+      border: none; border-radius: 0.5rem; font-weight: 700; cursor: pointer; margin-top: 0.5rem;
+    }
+    .modal-toggle { margin-top: 1rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
+    .modal-toggle button { background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 700; }
+    .modal-close { float: right; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; }
+    .modal-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
 </head>
 <body>
   <nav class="navbar">
@@ -18,11 +44,11 @@
       </div>
     </div>
 
-            <div class="content-type-tabs" id="contentTypeTabs">
-            <button class="content-type-btn active" data-type="movies">🎬 Movies</button>
-            <button class="content-type-btn" data-type="tv">📺 TV Shows</button>
-            <button class="content-type-btn" data-type="anime">🎌 Anime</button>
-        </div>
+    <div class="content-type-tabs" id="contentTypeTabs">
+      <button class="content-type-btn active" data-type="movies">🎬 Movies</button>
+      <button class="content-type-btn" data-type="tv">📺 TV Shows</button>
+      <button class="content-type-btn" data-type="anime">🎌 Anime</button>
+    </div>
 
     <div class="nav-tabs" id="navLinks">
       <button class="nav-link active" data-category="discover">Discover</button>
@@ -31,6 +57,9 @@
       <button class="nav-link" data-category="top_rated">Top Rated</button>
       <button class="nav-link" data-category="upcoming">Upcoming</button>
       <button class="nav-link" data-category="now_playing">Now Playing</button>
+      <!-- TV-only categories (hidden by default) -->
+      <button class="nav-link" data-category="on_air" style="display:none;">On Air</button>
+      <button class="nav-link" data-category="airing_today" style="display:none;">Airing Today</button>
     </div>
 
     <div class="nav-actions">
@@ -39,7 +68,7 @@
           id="searchInput"
           type="search"
           placeholder="Search the library..."
-          aria-label="Search movies"
+          aria-label="Search"
           autocomplete="off"
         />
         <button id="searchBtn" class="icon-btn" type="button">Search</button>
@@ -48,6 +77,7 @@
         <span id="themeIcon">🌙</span>
         <span id="themeLabel">Dark</span>
       </button>
+      <button id="authBtn" class="pill-btn" type="button" onclick="openAuthModal()">Sign In</button>
     </div>
   </nav>
 
@@ -89,21 +119,84 @@
       {% endfor %}
     </section>
 
-    <div class="loader" id="loading" aria-live="polite">Loading more movies…</div>
+    <div class="loader" id="loading" aria-live="polite">Loading…</div>
     <div class="toast" id="toast" role="status"></div>
 
-      <footer class="footer">
-    <div class="footer-content">
-      <p>&copy; 2026 WatchNextAI. All rights reserved.</p>
-      <div class="footer-links">
-        <a href="/terms">Terms & Conditions</a>
-        <span>|</span>
-        <a href="/privacy">Privacy Policy</a>
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; 2026 WatchNextAI. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="/terms">Terms &amp; Conditions</a>
+          <span>|</span>
+          <a href="/privacy">Privacy Policy</a>
+        </div>
       </div>
-    </div>
-  </footer>
+    </footer>
   </main>
 
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      <h2 id="authModalTitle">Sign In</h2>
+      <div class="modal-field">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="you@example.com" />
+      </div>
+      <div class="modal-field">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" />
+      </div>
+      <div class="modal-error" id="authError"></div>
+      <button class="modal-submit" id="authSubmit" onclick="handleAuthSubmit()">Sign In</button>
+      <div class="modal-toggle">
+        <span id="authToggleText">Don't have an account?</span>
+        <button onclick="toggleAuthMode()">Sign Up</button>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    let isSignUp = false;
+
+    function openAuthModal() { document.getElementById('authModal').classList.add('open'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); document.getElementById('authError').textContent = ''; }
+    function toggleAuthMode() {
+      isSignUp = !isSignUp;
+      document.getElementById('authModalTitle').textContent = isSignUp ? 'Sign Up' : 'Sign In';
+      document.getElementById('authSubmit').textContent = isSignUp ? 'Sign Up' : 'Sign In';
+      document.getElementById('authToggleText').textContent = isSignUp ? 'Already have an account?' : "Don't have an account?";
+      document.querySelector('.modal-toggle button').textContent = isSignUp ? 'Sign In' : 'Sign Up';
+      document.getElementById('authError').textContent = '';
+    }
+    async function handleAuthSubmit() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const errEl = document.getElementById('authError');
+      errEl.textContent = '';
+      if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
+      if (result.success) {
+        closeAuthModal();
+        updateAuthUI();
+        showToast(isSignUp ? 'Account created! Check your email.' : 'Signed in successfully.');
+      } else {
+        errEl.textContent = result.error || 'Authentication failed.';
+      }
+    }
+    async function updateAuthUI() {
+      const session = await checkAuth();
+      const btn = document.getElementById('authBtn');
+      if (session) {
+        btn.textContent = 'Sign Out';
+        btn.onclick = async () => { await signOut(); updateAuthUI(); showToast('Signed out.'); };
+      } else {
+        btn.textContent = 'Sign In';
+        btn.onclick = openAuthModal;
+      }
+    }
+    updateAuthUI();
+  </script>
 </body>
 </html>
