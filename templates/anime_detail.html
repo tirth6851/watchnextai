@@ -57,7 +57,7 @@
                 <span id="themeIcon">🌙</span>
                 <span id="themeLabel">Dark</span>
             </button>
-            <button id="authBtn" class="pill-btn" type="button">Sign In</button>
+            <button id="authBtn" class="pill-btn" type="button" onclick="openAuthModal()">Sign In</button>
         </div>
     </nav>
 
@@ -140,7 +140,7 @@
 
     <div class="toast" id="toast" role="status"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.3/dist/umd/supabase.min.js"></script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="{{ url_for('static', filename='js/auth-modal.js') }}"></script>
