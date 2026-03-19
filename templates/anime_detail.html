@@ -6,25 +6,16 @@
     <title>Anime Details • WatchNextAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
     <style>
-        .detail-actions {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
+        .detail-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
         .action-btn {
-            padding: 0.6rem 1.2rem;
-            border-radius: 999px;
-            border: 1px solid var(--border);
-            background: var(--card);
-            color: var(--fg);
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            padding: .6rem 1.2rem; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--fg); font-weight: 700; cursor: pointer; transition: all .2s;
         }
         .action-btn:hover { background: var(--accent-soft); }
         .action-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
         .trailer-block { margin-top: 2rem; }
-        .trailer-block h2 { margin: 0 0 0.75rem; font-size: 1.2rem; }
+        .trailer-block h2 { margin: 0 0 .75rem; font-size: 1.2rem; }
         .trailer-block iframe {
             width: 100%; aspect-ratio: 16/9;
             border: 1px solid var(--border); border-radius: var(--radius); background: #000;
@@ -33,57 +24,20 @@
             margin-top: 2rem; padding: 1.5rem;
             background: var(--card); border-radius: 1rem; border: 1px solid var(--border);
         }
-        .chatbot-header {
-            display: flex; align-items: center; gap: 0.75rem;
-            margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700;
-        }
-        .chat-messages {
-            max-height: 380px; overflow-y: auto; margin-bottom: 1rem;
-            padding: 1rem; background: var(--bg); border-radius: 0.5rem;
-        }
-        .chat-message {
-            margin-bottom: 1rem; padding: 0.75rem 1rem;
-            border-radius: 0.75rem; max-width: 80%;
-        }
+        .chatbot-header { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; }
+        .chat-messages { max-height: 380px; overflow-y: auto; margin-bottom: 1rem; padding: 1rem; background: var(--bg); border-radius: .5rem; }
+        .chat-message { margin-bottom: 1rem; padding: .75rem 1rem; border-radius: .75rem; max-width: 80%; }
         .chat-message.user { background: var(--accent); color: white; margin-left: auto; }
         .chat-message.bot { background: var(--card); border: 1px solid var(--border); }
-        .chat-input-container { display: flex; gap: 0.5rem; }
-        .chat-input {
-            flex: 1; padding: 0.75rem 1rem; background: var(--bg);
-            border: 1px solid var(--border); border-radius: 0.5rem;
-            color: var(--fg); font-family: inherit;
-        }
-        .chat-send-btn {
-            padding: 0.75rem 1.5rem; background: var(--accent); color: white;
-            border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 700;
-        }
-        .chat-send-btn:hover { opacity: 0.9; }
-        .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .modal-overlay {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-            z-index: 100; place-items: center;
-        }
-        .modal-overlay.open { display: grid; }
-        .modal {
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 1rem; padding: 2rem; width: 100%; max-width: 400px;
-        }
-        .modal h2 { margin: 0 0 1.5rem; font-size: 1.4rem; }
-        .modal-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
-        .modal-field label { font-weight: 600; font-size: 0.9rem; color: var(--muted); }
-        .modal-field input {
-            padding: 0.65rem 1rem; background: var(--card);
-            border: 1px solid var(--border); border-radius: 0.5rem; color: var(--fg); font-family: inherit;
-        }
-        .modal-submit {
-            width: 100%; padding: 0.75rem; background: var(--accent); color: white;
-            border: none; border-radius: 0.5rem; font-weight: 700; cursor: pointer; margin-top: 0.5rem;
-        }
-        .modal-toggle { margin-top: 1rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
-        .modal-toggle button { background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 700; }
-        .modal-close { float: right; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; }
-        .modal-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; }
+        .chat-input-container { display: flex; gap: .5rem; }
+        .chat-input { flex: 1; padding: .75rem 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; color: var(--fg); font-family: inherit; }
+        .chat-send-btn { padding: .75rem 1.5rem; background: var(--accent); color: white; border: none; border-radius: .5rem; cursor: pointer; font-weight: 700; }
+        .chat-send-btn:hover { opacity: .9; }
+        .chat-send-btn:disabled { opacity: .5; cursor: not-allowed; }
     </style>
+    <script>
+        (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -100,15 +54,15 @@
                 <span id="themeIcon">🌙</span>
                 <span id="themeLabel">Dark</span>
             </button>
-            <button id="authBtn" class="pill-btn" type="button" onclick="openAuthModal()">Sign In</button>
+            <button id="authBtn" class="pill-btn" type="button">Sign In</button>
         </div>
     </nav>
 
     <main class="detail">
-        <div id="loading" style="text-align: center; padding: 2rem;">Loading anime details...</div>
-        <div id="error" style="display: none; text-align: center; padding: 2rem; color: #ef4444;"></div>
+        <div id="loading" style="text-align:center;padding:2rem;">Loading anime details…</div>
+        <div id="error" style="display:none;text-align:center;padding:2rem;color:#ef4444;"></div>
 
-        <div id="animeContent" style="display: none;">
+        <div id="animeContent" style="display:none;">
             <div class="detail-grid">
                 <div class="detail-poster">
                     <img id="posterImg" class="poster big" alt="Anime poster" />
@@ -116,7 +70,7 @@
                 <div class="detail-info">
                     <div class="detail-header">
                         <h1 id="animeTitle" class="detail-title"></h1>
-                        <p id="animeSubtitle" class="detail-tagline" style="display: none;"></p>
+                        <p id="animeSubtitle" class="detail-tagline" style="display:none;"></p>
                     </div>
                     <div id="animeStats" class="detail-stats"></div>
                     <p id="animeSynopsis" class="detail-overview"></p>
@@ -127,29 +81,20 @@
                 </div>
             </div>
 
-            <!-- Trailer Section -->
-            <div class="trailer-block" id="trailerBlock" style="display: none;">
+            <div class="trailer-block" id="trailerBlock" style="display:none;">
                 <h2>🎬 Trailer</h2>
-                <iframe id="trailerIframe" src="" title="Anime Trailer"
-                    frameborder="0"
+                <iframe id="trailerIframe" src="" title="Anime Trailer" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
             </div>
 
-            <!-- Chatbot Section -->
             <div class="chatbot-container">
-                <div class="chatbot-header">
-                    <span>🤖</span>
-                    <span>Chat about this anime</span>
-                </div>
+                <div class="chatbot-header"><span>🤖</span><span>Chat about this anime</span></div>
                 <div class="chat-messages" id="chatMessages">
-                    <div class="chat-message bot">
-                        Hi! I'm here to discuss this anime with you. Ask me about the plot, characters, arcs, or get recommendations for similar anime!
-                    </div>
+                    <div class="chat-message bot">Hi! Ask me about the plot, characters, arcs, or get recommendations for similar anime!</div>
                 </div>
                 <div class="chat-input-container">
-                    <input type="text" id="chatInput" class="chat-input"
-                        placeholder="Ask about the anime..."
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Ask about the anime…"
                         onkeypress="if(event.key==='Enter') sendMessage()" />
                     <button id="chatSendBtn" class="chat-send-btn" onclick="sendMessage()">Send</button>
                 </div>
@@ -158,23 +103,30 @@
     </main>
 
     <!-- Auth Modal -->
-    <div class="modal-overlay" id="authModal">
+    <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <div class="modal">
-            <button class="modal-close" onclick="closeAuthModal()">✕</button>
-            <h2 id="authModalTitle">Sign In</h2>
+            <button class="modal-close" onclick="closeAuthModal()" aria-label="Close">✕</button>
+            <h2 id="authModalTitle">Welcome Back</h2>
             <div class="modal-field">
-                <label>Email</label>
-                <input type="email" id="authEmail" placeholder="you@example.com" />
+                <label for="authEmail">Email</label>
+                <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" />
             </div>
             <div class="modal-field">
-                <label>Password</label>
-                <input type="password" id="authPassword" placeholder="••••••••" />
+                <label for="authPassword">Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+                    <button class="password-toggle" type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">👁</button>
+                </div>
+            </div>
+            <div id="strengthContainer" style="display:none;" class="strength-container">
+                <div class="strength-track"><div id="strengthBar" class="strength-bar"></div></div>
+                <span id="strengthLabel" class="strength-label"></span>
             </div>
             <div class="modal-error" id="authError"></div>
             <button class="modal-submit" id="authSubmit" onclick="handleAuthSubmit()">Sign In</button>
             <div class="modal-toggle">
                 <span id="authToggleText">Don't have an account?</span>
-                <button onclick="toggleAuthMode()">Sign Up</button>
+                <button id="authToggleBtn" onclick="toggleAuthMode()">Sign Up</button>
             </div>
         </div>
     </div>
@@ -184,101 +136,45 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth-modal.js') }}"></script>
     <script>
         const animeId = {{ anime_id }};
         let animeData = null;
-        let isSignUp = false;
         let inWatchlist = false;
-
-        (function() {
-            const saved = localStorage.getItem('wn_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', saved);
-            const icon = document.getElementById('themeIcon');
-            const label = document.getElementById('themeLabel');
-            if (saved === 'light') { if(icon) icon.textContent = '☀️'; if(label) label.textContent = 'Light'; }
-        })();
-        const toggle = document.getElementById('themeToggle');
-        if (toggle) toggle.addEventListener('click', toggleTheme);
-
-        function openAuthModal() { document.getElementById('authModal').classList.add('open'); }
-        function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); document.getElementById('authError').textContent = ''; }
-        function toggleAuthMode() {
-            isSignUp = !isSignUp;
-            document.getElementById('authModalTitle').textContent = isSignUp ? 'Sign Up' : 'Sign In';
-            document.getElementById('authSubmit').textContent = isSignUp ? 'Sign Up' : 'Sign In';
-            document.getElementById('authToggleText').textContent = isSignUp ? 'Already have an account?' : "Don't have an account?";
-            document.querySelector('.modal-toggle button').textContent = isSignUp ? 'Sign In' : 'Sign Up';
-            document.getElementById('authError').textContent = '';
-        }
-        async function handleAuthSubmit() {
-            const email = document.getElementById('authEmail').value.trim();
-            const password = document.getElementById('authPassword').value;
-            const errEl = document.getElementById('authError');
-            errEl.textContent = '';
-            if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
-            const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
-            if (result.success) {
-                closeAuthModal();
-                updateAuthUI();
-                showToast(isSignUp ? 'Account created! Check your email.' : 'Signed in successfully.');
-            } else {
-                errEl.textContent = result.error || 'Authentication failed.';
-            }
-        }
-        async function updateAuthUI() {
-            const session = await checkAuth();
-            const btn = document.getElementById('authBtn');
-            if (session) {
-                btn.textContent = 'Sign Out';
-                btn.onclick = async () => { await signOut(); updateAuthUI(); showToast('Signed out.'); };
-            } else {
-                btn.textContent = 'Sign In';
-                btn.onclick = openAuthModal;
-            }
-        }
 
         async function toggleWatchlist() {
             const session = await checkAuth();
-            if (!session) { showToast('Sign in to use watchlist.'); openAuthModal(); return; }
+            if (!session) { window.showToast('Sign in to use watchlist.'); openAuthModal(); return; }
             const btn = document.getElementById('watchlistBtn');
-            const posterUrl = animeData?.images?.jpg?.image_url || null;
+            const poster = animeData?.images?.jpg?.image_url || null;
             if (inWatchlist) {
-                const result = await removeFromWatchlist(animeId);
-                if (result.success) { inWatchlist = false; btn.textContent = '+ Add to Watchlist'; btn.classList.remove('active'); showToast('Removed from watchlist.'); }
-                else showToast(result.error || 'Error updating watchlist.', 'error');
+                const r = await removeFromWatchlist(animeId);
+                if (r.success) { inWatchlist = false; btn.textContent = '+ Add to Watchlist'; btn.classList.remove('active'); window.showToast('Removed from watchlist.'); }
+                else window.showToast(r.error || 'Error.', 'error');
             } else {
-                const result = await addToWatchlist(animeId, 'anime', animeData?.title, posterUrl);
-                if (result.success) { inWatchlist = true; btn.textContent = '✓ In Watchlist'; btn.classList.add('active'); showToast('Added to watchlist!'); }
-                else showToast(result.error || 'Error updating watchlist.', 'error');
+                const r = await addToWatchlist(animeId, 'anime', animeData?.title, poster);
+                if (r.success) { inWatchlist = true; btn.textContent = '✓ In Watchlist'; btn.classList.add('active'); window.showToast('Added to watchlist!'); }
+                else window.showToast(r.error || 'Error.', 'error');
             }
         }
         async function markWatched() {
             const session = await checkAuth();
-            if (!session) { showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const result = await markAsWatched(animeId, 'anime', animeData?.title, null);
-            if (result.success) { document.getElementById('watchedBtn').classList.add('active'); showToast('Marked as watched!'); }
-            else showToast(result.error || 'Error saving watched status.', 'error');
-        }
-
-        function showToast(message, variant) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            t.textContent = message;
-            t.classList.add('show');
-            t.classList.toggle('toast-error', variant === 'error');
-            setTimeout(() => t.classList.remove('show'), 3500);
+            if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
+            const r = await markAsWatched(animeId, 'anime', animeData?.title, null);
+            if (r.success) { document.getElementById('watchedBtn').classList.add('active'); window.showToast('Marked as watched!'); }
+            else window.showToast(r.error || 'Error.', 'error');
         }
 
         async function loadAnimeDetails() {
             try {
-                const response = await fetch(`/api/anime/${animeId}`);
-                if (!response.ok) throw new Error('Failed to load anime');
-                animeData = await response.json();
+                const res = await fetch(`/api/anime/${animeId}`);
+                if (!res.ok) throw new Error();
+                animeData = await res.json();
                 displayAnime(animeData);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('animeContent').style.display = 'block';
                 loadTrailer();
-            } catch (error) {
+            } catch {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
                 document.getElementById('error').textContent = 'Failed to load anime details. Please try again.';
@@ -286,79 +182,56 @@
         }
 
         function displayAnime(anime) {
-            const posterImg = document.getElementById('posterImg');
-            const imageUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
-            posterImg.src = imageUrl || 'https://via.placeholder.com/500x750?text=No+Image';
-            posterImg.alt = anime.title;
-
+            const imgUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
+            document.getElementById('posterImg').src  = imgUrl || 'https://via.placeholder.com/500x750?text=No+Image';
+            document.getElementById('posterImg').alt  = anime.title;
             document.getElementById('animeTitle').textContent = anime.title || 'Untitled';
-
             if (anime.title_english && anime.title_english !== anime.title) {
-                const subtitle = document.getElementById('animeSubtitle');
-                subtitle.textContent = anime.title_english;
-                subtitle.style.display = 'block';
+                const sub = document.getElementById('animeSubtitle');
+                sub.textContent = anime.title_english; sub.style.display = 'block';
             }
-
-            const stats = document.getElementById('animeStats');
-            let statsHTML = '';
-            if (anime.score) statsHTML += `<span class="chip">⭐ ${anime.score}</span>`;
-            if (anime.aired?.from) statsHTML += `<span class="chip">${anime.aired.from.slice(0,4)}</span>`;
-            if (anime.episodes) statsHTML += `<span class="chip">${anime.episodes} episodes</span>`;
-            if (anime.status) statsHTML += `<span class="chip">${anime.status}</span>`;
-            if (anime.genres?.length) statsHTML += `<span class="chip">${anime.genres.map(g => g.name).join(', ')}</span>`;
-            stats.innerHTML = statsHTML;
-
+            let html = '';
+            if (anime.score)             html += `<span class="chip">⭐ ${anime.score}</span>`;
+            if (anime.aired?.from)       html += `<span class="chip">${anime.aired.from.slice(0,4)}</span>`;
+            if (anime.episodes)          html += `<span class="chip">${anime.episodes} episodes</span>`;
+            if (anime.status)            html += `<span class="chip">${anime.status}</span>`;
+            if (anime.genres?.length)    html += `<span class="chip">${anime.genres.map(g=>g.name).join(', ')}</span>`;
+            document.getElementById('animeStats').innerHTML = html;
             document.getElementById('animeSynopsis').textContent = anime.synopsis || 'No synopsis available.';
         }
 
         function loadTrailer() {
-            const youtubeId = animeData?.trailer?.youtube_id;
-            if (youtubeId) {
-                document.getElementById('trailerIframe').src = `https://www.youtube.com/embed/${youtubeId}`;
+            const ytId = animeData?.trailer?.youtube_id;
+            if (ytId) {
+                document.getElementById('trailerIframe').src = `https://www.youtube.com/embed/${ytId}`;
                 document.getElementById('trailerBlock').style.display = 'block';
             }
         }
 
         async function sendMessage() {
-            const input = document.getElementById('chatInput');
+            const input   = document.getElementById('chatInput');
             const sendBtn = document.getElementById('chatSendBtn');
             const message = input.value.trim();
             if (!message || !animeData) return;
-
-            addMessage(message, 'user');
-            input.value = '';
-            sendBtn.disabled = true;
-
+            addChatMessage(message, 'user');
+            input.value = ''; sendBtn.disabled = true;
             try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        movie_title: animeData.title,
-                        movie_overview: animeData.synopsis,
-                        message: message
-                    })
+                const res = await fetch('/api/chat', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ movie_title: animeData.title, movie_overview: animeData.synopsis, message })
                 });
-                if (!response.ok) throw new Error('Chat failed');
-                const data = await response.json();
-                addMessage(data.response, 'bot');
-            } catch (error) {
-                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
-            } finally {
-                sendBtn.disabled = false;
-            }
+                const data = await res.json();
+                addChatMessage(data.response || 'No response.', 'bot');
+            } catch { addChatMessage('Sorry, an error occurred.', 'bot'); }
+            finally { sendBtn.disabled = false; }
+        }
+        function addChatMessage(text, sender) {
+            const c = document.getElementById('chatMessages');
+            const d = document.createElement('div');
+            d.className = `chat-message ${sender}`; d.textContent = text;
+            c.appendChild(d); c.scrollTop = c.scrollHeight;
         }
 
-        function addMessage(text, sender) {
-            const container = document.getElementById('chatMessages');
-            const div = document.createElement('div');
-            div.className = `chat-message ${sender}`;
-            div.textContent = text;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        updateAuthUI();
         loadAnimeDetails();
     </script>
 </body>

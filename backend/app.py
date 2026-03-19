@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
@@ -307,6 +310,73 @@ def get_anime_details(anime_id):
         return jsonify(response.json().get("data", {}))
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 502
+
+
+@app.route('/api/send-welcome-email', methods=['POST'])
+def send_welcome_email():
+    smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('SMTP_PORT', '587'))
+    smtp_user = os.getenv('SMTP_USER')
+    smtp_pass = os.getenv('SMTP_PASS')
+
+    if not smtp_user or not smtp_pass:
+        # Email service not configured — skip silently
+        return jsonify({'success': True, 'note': 'Email service not configured'})
+
+    data = request.get_json(silent=True) or {}
+    to_email = data.get('email', '').strip()
+    if not to_email:
+        return jsonify({'error': 'No email provided'}), 400
+
+    html_body = f"""<!DOCTYPE html>
+<html><head><style>
+  body{{margin:0;padding:0;background:#0b0f18;font-family:'Segoe UI',Arial,sans-serif;}}
+  .wrap{{max-width:560px;margin:40px auto;background:rgba(255,255,255,0.06);
+         border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:40px;}}
+  h1{{color:#7c3aed;margin:0 0 16px;font-size:1.6rem;}}
+  p{{color:#cbd5e1;line-height:1.65;margin:0 0 12px;}}
+  ul{{color:#cbd5e1;line-height:2.2;padding-left:1.5rem;margin:0 0 20px;}}
+  .cta{{display:inline-block;margin-top:8px;padding:14px 28px;
+        background:#7c3aed;color:#fff;border-radius:999px;
+        text-decoration:none;font-weight:700;font-size:0.95rem;}}
+  .footer{{margin-top:32px;padding-top:16px;
+           border-top:1px solid rgba(148,163,184,0.2);
+           color:rgba(203,213,225,0.5);font-size:12px;}}
+</style></head><body>
+<div class="wrap">
+  <h1>🎬 Welcome to WatchNextAI!</h1>
+  <p>Hey! We're so glad you joined the family. 🎉</p>
+  <p>Here's what's waiting for you:</p>
+  <ul>
+    <li>🎬 Thousands of Movies, TV Shows &amp; Anime</li>
+    <li>🤖 AI chat to geek out about your favourites</li>
+    <li>📋 Your personal Watchlist</li>
+    <li>✓ Track everything you've watched</li>
+  </ul>
+  <p>Jump in and find your next obsession.</p>
+  <a class="cta" href="https://watchnextai.vercel.app">Start Discovering →</a>
+  <div class="footer">
+    WatchNextAI &nbsp;·&nbsp; {to_email}<br>
+    If you didn't sign up, you can safely ignore this email.
+  </div>
+</div>
+</body></html>"""
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = '🎬 Welcome to WatchNextAI!'
+        msg['From']    = smtp_user
+        msg['To']      = to_email
+        msg.attach(MIMEText(html_body, 'html'))
+
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/terms')
