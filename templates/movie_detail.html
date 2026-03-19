@@ -41,6 +41,7 @@
     </script>
 </head>
 <body>
+    <div id="dynamicBg" class="dynamic-bg"></div>
     <nav class="navbar navbar--detail">
         <div class="nav-brand">
             <div class="logo">🎬</div>
@@ -187,11 +188,20 @@
             }
         }
 
+        function setDynamicBg(url) {
+            const bg = document.getElementById('dynamicBg');
+            if (!bg || !url) return;
+            bg.style.backgroundImage = `url('${url}')`;
+            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+        }
+
         function displayMovie(movie) {
-            document.getElementById('posterImg').src = movie.poster_path
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : 'https://via.placeholder.com/500x750?text=No+Image';
+            const posterUrl = movie.poster_path
+                ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+                : null;
+            document.getElementById('posterImg').src = posterUrl || 'https://via.placeholder.com/500x750?text=No+Image';
             document.getElementById('posterImg').alt = movie.title;
+            setDynamicBg(posterUrl);
             document.getElementById('movieTitle').textContent = movie.title || 'Untitled';
             if (movie.tagline) {
                 const tl = document.getElementById('movieTagline');

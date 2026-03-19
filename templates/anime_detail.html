@@ -40,6 +40,7 @@
     </script>
 </head>
 <body>
+    <div id="dynamicBg" class="dynamic-bg"></div>
     <nav class="navbar navbar--detail">
         <div class="nav-brand">
             <div class="logo">🎌</div>
@@ -187,10 +188,18 @@
             }
         }
 
+        function setDynamicBg(url) {
+            const bg = document.getElementById('dynamicBg');
+            if (!bg || !url) return;
+            bg.style.backgroundImage = `url('${url}')`;
+            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+        }
+
         function displayAnime(anime) {
             const imgUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
             document.getElementById('posterImg').src  = imgUrl || 'https://via.placeholder.com/500x750?text=No+Image';
             document.getElementById('posterImg').alt  = anime.title;
+            setDynamicBg(imgUrl || null);
             document.getElementById('animeTitle').textContent = anime.title || 'Untitled';
             if (anime.title_english && anime.title_english !== anime.title) {
                 const sub = document.getElementById('animeSubtitle');

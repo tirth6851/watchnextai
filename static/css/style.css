@@ -265,12 +265,26 @@ a {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+  position: relative;
 }
 
 .card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124,58,237,0.25);
+}
+
+/* Glare overlay for 3D tilt */
+.card-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: screen;
+  background: transparent;
+  transition: background 0.05s;
 }
 
 .card-link {
@@ -1005,3 +1019,18 @@ a {
     border-color: rgba(239,68,68,.4);
 }
 .remove-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ─── Dynamic poster background (detail pages) ──────────────────────────── */
+.dynamic-bg {
+    position: fixed;
+    inset: -8%;
+    width: 116%;
+    height: 116%;
+    z-index: -1;
+    background-size: cover;
+    background-position: center top;
+    filter: blur(90px) brightness(0.18) saturate(2.5);
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+}

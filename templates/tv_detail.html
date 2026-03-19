@@ -40,6 +40,7 @@
     </script>
 </head>
 <body>
+    <div id="dynamicBg" class="dynamic-bg"></div>
     <nav class="navbar navbar--detail">
         <div class="nav-brand">
             <div class="logo">📺</div>
@@ -186,11 +187,20 @@
             }
         }
 
+        function setDynamicBg(url) {
+            const bg = document.getElementById('dynamicBg');
+            if (!bg || !url) return;
+            bg.style.backgroundImage = `url('${url}')`;
+            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+        }
+
         function displayShow(show) {
-            document.getElementById('posterImg').src = show.poster_path
-                ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
-                : 'https://via.placeholder.com/500x750?text=No+Image';
+            const posterUrl = show.poster_path
+                ? `https://image.tmdb.org/t/p/w780${show.poster_path}`
+                : null;
+            document.getElementById('posterImg').src = posterUrl || 'https://via.placeholder.com/500x750?text=No+Image';
             document.getElementById('posterImg').alt = show.name;
+            setDynamicBg(posterUrl);
             document.getElementById('showTitle').textContent = show.name || 'Untitled';
             if (show.tagline) {
                 const tl = document.getElementById('showTagline');
