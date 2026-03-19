@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Profile • WatchNextAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script>
+        (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar--detail">
+        <div class="nav-brand">
+            <div class="logo">🎬</div>
+            <div class="brand-text">
+                <div class="brand-title">WatchNextAI</div>
+                <div class="brand-subtitle">My Profile</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <a class="pill-btn" href="/">← Discover</a>
+            <span id="authGreeting" class="auth-greeting" style="display:none;"></span>
+            <button id="themeToggle" class="pill-btn" type="button">
+                <span id="themeIcon">🌙</span>
+                <span id="themeLabel">Dark</span>
+            </button>
+            <button id="authBtn" class="pill-btn" type="button">Sign In</button>
+        </div>
+    </nav>
+
+    <main class="page">
+        <!-- Not logged in state -->
+        <div id="notLoggedIn" style="display:none; text-align:center; padding:4rem 1rem;">
+            <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
+            <h2 style="margin-bottom:.5rem;">Sign in to view your profile</h2>
+            <p style="color:var(--fg-muted); margin-bottom:1.5rem;">Track what you've watched and what's on your list.</p>
+            <button class="pill-btn" onclick="openAuthModal()" style="background:var(--accent);color:white;border-color:var(--accent);">Sign In</button>
+        </div>
+
+        <!-- Profile content -->
+        <div id="profileContent" style="display:none;">
+            <!-- Header -->
+            <div class="profile-header">
+                <div class="profile-avatar" id="profileAvatar">🎬</div>
+                <div>
+                    <h1 class="profile-name" id="profileName">Loading…</h1>
+                    <p class="profile-email" id="profileEmail"></p>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="profile-stats" id="profileStats">
+                <div class="stat-card">
+                    <div class="stat-number" id="watchlistCount">–</div>
+                    <div class="stat-label">To Watch</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="watchedCount">–</div>
+                    <div class="stat-label">Watched</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="profile-tabs">
+                <button class="profile-tab active" id="tabWatchlist" onclick="switchTab('watchlist')">📋 Watchlist</button>
+                <button class="profile-tab" id="tabWatched" onclick="switchTab('watched')">✓ Watched</button>
+            </div>
+
+            <!-- Watchlist grid -->
+            <section id="watchlistSection">
+                <div class="grid" id="watchlistGrid"></div>
+                <p id="watchlistEmpty" style="display:none; text-align:center; color:var(--fg-muted); padding:2rem;">
+                    Your watchlist is empty. Start adding movies, shows, and anime!
+                </p>
+            </section>
+
+            <!-- Watched grid -->
+            <section id="watchedSection" style="display:none;">
+                <div class="grid" id="watchedGrid"></div>
+                <p id="watchedEmpty" style="display:none; text-align:center; color:var(--fg-muted); padding:2rem;">
+                    Nothing watched yet. Mark something as watched to track it here!
+                </p>
+            </section>
+        </div>
+
+        <div class="toast" id="toast" role="status"></div>
+    </main>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="modal">
+            <button class="modal-close" onclick="closeAuthModal()" aria-label="Close">✕</button>
+            <h2 id="authModalTitle">Welcome Back</h2>
+            <div class="modal-field" id="nameField" style="display:none;">
+                <label for="authName">Name</label>
+                <input type="text" id="authName" placeholder="Your name" autocomplete="name" />
+            </div>
+            <div class="modal-field">
+                <label for="authEmail">Email</label>
+                <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" />
+            </div>
+            <div class="modal-field">
+                <label for="authPassword">Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+                    <button class="password-toggle" type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">👁</button>
+                </div>
+            </div>
+            <div id="strengthContainer" style="display:none;" class="strength-container">
+                <div class="strength-track"><div id="strengthBar" class="strength-bar"></div></div>
+                <span id="strengthLabel" class="strength-label"></span>
+            </div>
+            <div class="modal-error" id="authError"></div>
+            <button class="modal-submit" id="authSubmit" onclick="handleAuthSubmit()">Sign In</button>
+            <div class="modal-toggle">
+                <span id="authToggleText">Don't have an account?</span>
+                <button id="authToggleBtn" onclick="toggleAuthMode()">Sign Up</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth-modal.js') }}"></script>
+    <script>
+        let _activeTab = 'watchlist';
+
+        function switchTab(tab) {
+            _activeTab = tab;
+            document.getElementById('tabWatchlist').classList.toggle('active', tab === 'watchlist');
+            document.getElementById('tabWatched').classList.toggle('active', tab === 'watched');
+            document.getElementById('watchlistSection').style.display = tab === 'watchlist' ? 'block' : 'none';
+            document.getElementById('watchedSection').style.display   = tab === 'watched'   ? 'block' : 'none';
+        }
+
+        function _posterUrl(item) {
+            const p = item.poster_path;
+            if (!p) return 'https://via.placeholder.com/500x750?text=No+Image';
+            if (p.startsWith('http')) return p;
+            return `https://image.tmdb.org/t/p/w500${p}`;
+        }
+
+        function _detailUrl(item) {
+            const t = item.media_type;
+            if (t === 'tv')    return `/tv/${item.media_id}`;
+            if (t === 'anime') return `/anime/${item.media_id}`;
+            return `/movie/${item.media_id}`;
+        }
+
+        function _typeBadge(mediaType) {
+            if (mediaType === 'tv')    return '<span class="type-badge tv">TV</span>';
+            if (mediaType === 'anime') return '<span class="type-badge anime">Anime</span>';
+            return '<span class="type-badge movie">Movie</span>';
+        }
+
+        function renderWatchlistCard(item) {
+            const card = document.createElement('article');
+            card.className = 'card profile-card';
+            card.dataset.mediaId = item.media_id;
+            card.innerHTML = `
+                <a class="card-link" href="${_detailUrl(item)}">
+                    <img class="poster" src="${_posterUrl(item)}" alt="${item.title || ''}" loading="lazy" />
+                </a>
+                <div class="card-meta">
+                    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                        ${_typeBadge(item.media_type)}
+                        <h3 class="card-title" style="flex:1;min-width:0;">${item.title || 'Untitled'}</h3>
+                    </div>
+                    <button class="remove-btn" onclick="removeWatchlistItem(${item.media_id}, this)" title="Remove">✕ Remove</button>
+                </div>`;
+            return card;
+        }
+
+        function renderWatchedCard(item) {
+            const card = document.createElement('article');
+            card.className = 'card profile-card';
+            card.dataset.mediaId = item.media_id;
+            card.innerHTML = `
+                <a class="card-link" href="${_detailUrl(item)}">
+                    <img class="poster" src="${_posterUrl(item)}" alt="${item.title || ''}" loading="lazy" />
+                </a>
+                <div class="card-meta">
+                    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                        ${_typeBadge(item.media_type)}
+                        <h3 class="card-title" style="flex:1;min-width:0;">${item.title || 'Untitled'}</h3>
+                    </div>
+                    <button class="remove-btn" onclick="removeWatchedItem(${item.media_id}, this)" title="Remove">✕ Remove</button>
+                </div>`;
+            return card;
+        }
+
+        async function removeWatchlistItem(mediaId, btn) {
+            btn.disabled = true;
+            const r = await removeFromWatchlist(mediaId);
+            if (r.success) {
+                const card = btn.closest('.card');
+                card.style.transition = 'opacity .3s, transform .3s';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(.9)';
+                setTimeout(() => {
+                    card.remove();
+                    const count = parseInt(document.getElementById('watchlistCount').textContent) - 1;
+                    document.getElementById('watchlistCount').textContent = count;
+                    if (count === 0) document.getElementById('watchlistEmpty').style.display = 'block';
+                }, 300);
+                window.showToast('Removed from watchlist.');
+            } else {
+                btn.disabled = false;
+                window.showToast(r.error || 'Error removing item.', 'error');
+            }
+        }
+
+        async function removeWatchedItem(mediaId, btn) {
+            btn.disabled = true;
+            const r = await removeFromWatched(mediaId);
+            if (r.success) {
+                const card = btn.closest('.card');
+                card.style.transition = 'opacity .3s, transform .3s';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(.9)';
+                setTimeout(() => {
+                    card.remove();
+                    const count = parseInt(document.getElementById('watchedCount').textContent) - 1;
+                    document.getElementById('watchedCount').textContent = count;
+                    if (count === 0) document.getElementById('watchedEmpty').style.display = 'block';
+                }, 300);
+                window.showToast('Removed from watched.');
+            } else {
+                btn.disabled = false;
+                window.showToast(r.error || 'Error removing item.', 'error');
+            }
+        }
+
+        async function loadProfile() {
+            const session = await checkAuth();
+            if (!session) {
+                document.getElementById('notLoggedIn').style.display = 'block';
+                return;
+            }
+            document.getElementById('profileContent').style.display = 'block';
+
+            // Populate header
+            const name = session.user?.user_metadata?.full_name
+                || session.user?.email?.split('@')[0]
+                || 'there';
+            const initial = name.charAt(0).toUpperCase();
+            document.getElementById('profileAvatar').textContent = initial;
+            document.getElementById('profileName').textContent = `Hi, ${name}! 👋`;
+            document.getElementById('profileEmail').textContent = session.user.email || '';
+
+            // Load watchlist
+            const wl = await getWatchlist();
+            const watchlistItems = wl.success ? (wl.data || []) : [];
+            document.getElementById('watchlistCount').textContent = watchlistItems.length;
+            const wlGrid = document.getElementById('watchlistGrid');
+            if (watchlistItems.length === 0) {
+                document.getElementById('watchlistEmpty').style.display = 'block';
+            } else {
+                watchlistItems.forEach(item => wlGrid.appendChild(renderWatchlistCard(item)));
+            }
+
+            // Load watched
+            const wd = await getWatched();
+            const watchedItems = wd.success ? (wd.data || []) : [];
+            document.getElementById('watchedCount').textContent = watchedItems.length;
+            const wdGrid = document.getElementById('watchedGrid');
+            if (watchedItems.length === 0) {
+                document.getElementById('watchedEmpty').style.display = 'block';
+            } else {
+                watchedItems.forEach(item => wdGrid.appendChild(renderWatchedCard(item)));
+            }
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>

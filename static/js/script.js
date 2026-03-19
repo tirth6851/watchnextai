@@ -130,6 +130,36 @@ function updateHeader() {
   }
 }
 
+// ---- 3D Tilt effect ----
+
+function addTiltEffect(card) {
+  card.addEventListener("mousemove", function (e) {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotX = ((y - cy) / cy) * -9;
+    const rotY = ((x - cx) / cx) * 9;
+    card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.04,1.04,1.04)`;
+    const glare = card.querySelector(".card-glare");
+    if (glare) {
+      const angle = Math.atan2(y - cy, x - cx) * (180 / Math.PI) + 90;
+      const pct = Math.min(
+        Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) /
+          (Math.max(rect.width, rect.height) * 0.55),
+        1
+      );
+      glare.style.background = `linear-gradient(${angle}deg, rgba(255,255,255,${(pct * 0.22).toFixed(3)}), transparent 60%)`;
+    }
+  });
+  card.addEventListener("mouseleave", function () {
+    card.style.transform = "";
+    const glare = card.querySelector(".card-glare");
+    if (glare) glare.style.background = "transparent";
+  });
+}
+
 // ---- Card renderers ----
 
 function renderMovieCard(movie) {
@@ -145,6 +175,7 @@ function renderMovieCard(movie) {
   const releaseYear = movie.release_date ? movie.release_date.slice(0, 4) : "TBA";
 
   card.innerHTML = `
+    <div class="card-glare"></div>
     <a class="card-link" href="/movie/${movie.id}">
       <img class="poster" src="${posterPath}" alt="${movie.title || "Movie"}" loading="lazy" />
     </a>
@@ -156,6 +187,7 @@ function renderMovieCard(movie) {
       </div>
     </div>
   `;
+  addTiltEffect(card);
   return card;
 }
 
@@ -172,6 +204,7 @@ function renderTvCard(show) {
   const year = show.first_air_date ? show.first_air_date.slice(0, 4) : "TBA";
 
   card.innerHTML = `
+    <div class="card-glare"></div>
     <a class="card-link" href="/tv/${show.id}">
       <img class="poster" src="${posterPath}" alt="${show.name || "Show"}" loading="lazy" />
     </a>
@@ -183,6 +216,7 @@ function renderTvCard(show) {
       </div>
     </div>
   `;
+  addTiltEffect(card);
   return card;
 }
 
@@ -196,6 +230,7 @@ function renderAnimeCard(anime) {
   const year = anime.aired?.from ? anime.aired.from.slice(0, 4) : "TBA";
 
   card.innerHTML = `
+    <div class="card-glare"></div>
     <a class="card-link" href="/anime/${anime.mal_id}">
       <img class="poster" src="${imageUrl}" alt="${anime.title || "Anime"}" loading="lazy" />
     </a>
@@ -207,6 +242,7 @@ function renderAnimeCard(anime) {
       </div>
     </div>
   `;
+  addTiltEffect(card);
   return card;
 }
 
