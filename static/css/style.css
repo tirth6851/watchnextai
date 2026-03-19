@@ -1068,3 +1068,7 @@ a {
     transition: opacity 1.2s ease;
     pointer-events: none;
 }
+
+html[data-theme="light"] .dynamic-bg {
+    opacity: 0 !important;
+}
