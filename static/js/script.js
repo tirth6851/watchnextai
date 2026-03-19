@@ -5,6 +5,7 @@ const state = {
   currentCategory: "discover",
   currentQuery: "",
   currentContentType: "movies",
+  isGlobalSearch: false,
 };
 
 const container = document.getElementById("movie-container");
@@ -117,6 +118,11 @@ function updateNavForContentType() {
 
 function updateHeader() {
   if (!pageTitle || !pageHint) return;
+  if (state.isGlobalSearch && state.currentQuery) {
+    pageTitle.textContent = `🔎 Results for "${state.currentQuery}"`;
+    pageHint.textContent = "Searching across movies, TV shows and anime.";
+    return;
+  }
   if (state.currentQuery) {
     pageTitle.textContent = `🔎 Results for "${state.currentQuery}"`;
     pageHint.textContent = "Searching the full library.";
@@ -177,9 +183,11 @@ function renderMovieCard(movie) {
 
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "0.0";
   const releaseYear = movie.release_date ? movie.release_date.slice(0, 4) : "TBA";
+  const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--movie">Movie</span>` : "";
 
   card.innerHTML = `
     <div class="card-glare"></div>
+    ${badge}
     <a class="card-link" href="/movie/${movie.id}">
       <img class="poster" src="${posterPath}" alt="${movie.title || "Movie"}" loading="lazy" />
     </a>
@@ -206,9 +214,11 @@ function renderTvCard(show) {
 
   const rating = show.vote_average ? show.vote_average.toFixed(1) : "0.0";
   const year = show.first_air_date ? show.first_air_date.slice(0, 4) : "TBA";
+  const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--tv">TV</span>` : "";
 
   card.innerHTML = `
     <div class="card-glare"></div>
+    ${badge}
     <a class="card-link" href="/tv/${show.id}">
       <img class="poster" src="${posterPath}" alt="${show.name || "Show"}" loading="lazy" />
     </a>
@@ -232,9 +242,11 @@ function renderAnimeCard(anime) {
   const imageUrl = anime.images?.jpg?.image_url || "https://via.placeholder.com/500x750?text=No+Image";
   const rating = anime.score ? anime.score.toFixed(1) : "N/A";
   const year = anime.aired?.from ? anime.aired.from.slice(0, 4) : "TBA";
+  const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--anime">Anime</span>` : "";
 
   card.innerHTML = `
     <div class="card-glare"></div>
+    ${badge}
     <a class="card-link" href="/anime/${anime.mal_id}">
       <img class="poster" src="${imageUrl}" alt="${anime.title || "Anime"}" loading="lazy" />
     </a>
@@ -248,6 +260,14 @@ function renderAnimeCard(anime) {
   `;
   addTiltEffect(card);
   return card;
+}
+
+function renderMixedCard(item) {
+  const type = item.media_type;
+  if (type === "movie") return renderMovieCard(item);
+  if (type === "tv") return renderTvCard(item);
+  if (type === "anime") return renderAnimeCard(item);
+  return null;
 }
 
 // ---- Fetch functions ----
@@ -271,6 +291,16 @@ async function fetchTvShows(page) {
   if (state.currentQuery) params.set("query", state.currentQuery);
 
   const response = await fetch(`/api/tv_shows?${params.toString()}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function fetchGlobalSearch(page) {
+  const params = new URLSearchParams({ query: state.currentQuery, page: String(page) });
+  const response = await fetch(`/api/search?${params.toString()}`);
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -307,7 +337,21 @@ async function loadContent({ page, replace = false } = {}) {
   try {
     let items = [];
 
-    if (state.currentContentType === "movies") {
+    if (state.isGlobalSearch) {
+      const data = await fetchGlobalSearch(page);
+      items = data.results || [];
+      if (replace) container.innerHTML = "";
+      if (!items.length) {
+        state.hasMore = false;
+        if (loading) loading.textContent = "No results found.";
+      } else {
+        items.forEach((item) => {
+          const card = renderMixedCard(item);
+          if (card) container.appendChild(card);
+        });
+        if (loading) loading.style.display = "none";
+      }
+    } else if (state.currentContentType === "movies") {
       const data = await fetchMovies(page);
       items = data.movies || [];
       if (replace) container.innerHTML = "";
@@ -383,7 +427,12 @@ function handleSearchInput(event) {
 function runServerSearch() {
   const q = (searchInput?.value || "").trim();
   state.currentQuery = q;
+  state.isGlobalSearch = q.length > 0;
   updateHeader();
+  // Show all content-type tabs as inactive during global search
+  if (state.isGlobalSearch) {
+    document.querySelectorAll(".content-type-btn").forEach((btn) => btn.classList.remove("active"));
+  }
   resetAndLoad();
 }
 
@@ -393,6 +442,7 @@ function handleCategoryClick(event) {
 
   state.currentCategory = button.dataset.category;
   state.currentQuery = "";
+  state.isGlobalSearch = false;
   if (searchInput) searchInput.value = "";
   localStorage.setItem("wn_category", state.currentCategory);
 
@@ -411,6 +461,7 @@ function handleContentTypeClick(event) {
 
   state.currentContentType = type;
   state.currentQuery = "";
+  state.isGlobalSearch = false;
   if (searchInput) searchInput.value = "";
 
   // Set a default category for the new type
@@ -465,10 +516,35 @@ if (contentTypeTabs) contentTypeTabs.addEventListener("click", handleContentType
 
 loadTheme();
 
-const savedCategory = localStorage.getItem("wn_category");
-if (savedCategory && movieTitles[savedCategory]) {
-  state.currentCategory = savedCategory;
-}
+// Read URL params from home page search or "See all" links
+(function applyUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const qParam = params.get("q");
+  const typeParam = params.get("type");
+  const catParam = params.get("category");
+
+  if (typeParam && ["movies", "tv", "anime"].includes(typeParam)) {
+    state.currentContentType = typeParam;
+    document.querySelectorAll(".content-type-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.type === typeParam);
+    });
+  }
+
+  if (catParam) {
+    state.currentCategory = catParam;
+  } else if (!typeParam) {
+    const savedCategory = localStorage.getItem("wn_category");
+    if (savedCategory && movieTitles[savedCategory]) {
+      state.currentCategory = savedCategory;
+    }
+  }
+
+  if (qParam) {
+    state.currentQuery = qParam;
+    state.isGlobalSearch = true;
+    if (searchInput) searchInput.value = qParam;
+  }
+})();
 
 updateNavForContentType();
 setActiveCategoryButton(state.currentCategory);

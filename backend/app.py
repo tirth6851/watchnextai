@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -68,6 +69,11 @@ def tmdb_get(path: str, **params):
 
 
 @app.route("/")
+def home():
+    return render_template("home.html")
+
+
+@app.route("/browse")
 def index():
     return render_template("index.html")
 
@@ -310,6 +316,57 @@ def get_anime_details(anime_id):
         return jsonify(response.json().get("data", {}))
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/search")
+def global_search():
+    query = request.args.get("query", "").strip()
+    page = request.args.get("page", 1, type=int)
+
+    if not query:
+        return jsonify({"results": [], "error": "No query provided."}), 400
+
+    results = []
+
+    def fetch_movies():
+        data, _ = tmdb_get("/search/movie", query=query, page=page, include_adult="false")
+        items = []
+        for m in (data or {}).get("results", []):
+            if m.get("vote_count", 0) > 50 or m.get("popularity", 0) > 5:
+                m["media_type"] = "movie"
+                items.append(m)
+        return items
+
+    def fetch_tv():
+        data, _ = tmdb_get("/search/tv", query=query, page=page, include_adult="false")
+        items = []
+        for s in (data or {}).get("results", []):
+            s["media_type"] = "tv"
+            items.append(s)
+        return items
+
+    def fetch_anime():
+        try:
+            resp = requests.get(
+                f"{JIKAN_BASE_URL}/anime",
+                params={"q": query, "page": page},
+                timeout=REQUEST_TIMEOUT,
+            )
+            resp.raise_for_status()
+            items = []
+            for a in resp.json().get("data", []):
+                a["media_type"] = "anime"
+                items.append(a)
+            return items
+        except Exception:
+            return []
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(fetch_movies), executor.submit(fetch_tv), executor.submit(fetch_anime)]
+        for f in futures:
+            results.extend(f.result())
+
+    return jsonify({"results": results})
 
 
 @app.route('/api/send-welcome-email', methods=['POST'])
