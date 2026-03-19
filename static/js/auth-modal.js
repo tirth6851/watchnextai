@@ -192,7 +192,7 @@ async function handleAuthSubmit() {
       updateAuthUI();
 
       if (_authIsSignUp) {
-        window.showToast('Welcome to the family! 🎬 Check your email to confirm your account.');
+        showSuccessPopup('Account created! 🎉', '🎬');
         // Send welcome email (best-effort, failure is silent)
         fetch('/api/send-welcome-email', {
           method: 'POST',
@@ -200,7 +200,7 @@ async function handleAuthSubmit() {
           body: JSON.stringify({ email })
         }).catch(() => {});
       } else {
-        window.showToast('Welcome back! 👋');
+        showSuccessPopup('Signed in successfully! 👋', '✅');
       }
     } else {
       if (errEl) errEl.textContent = result.error || 'Authentication failed. Please try again.';
@@ -211,6 +211,24 @@ async function handleAuthSubmit() {
   } finally {
     _setLoading(false);
   }
+}
+
+// ─── Centered success popup ───────────────────────────────────────────────────
+function showSuccessPopup(message, icon) {
+  icon = icon || '✅';
+  let popup = document.getElementById('_successPopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = '_successPopup';
+    popup.className = 'success-popup';
+    popup.innerHTML = '<div class="success-popup-icon"></div><div class="success-popup-text"></div>';
+    document.body.appendChild(popup);
+  }
+  clearTimeout(popup._timer);
+  popup.querySelector('.success-popup-icon').textContent = icon;
+  popup.querySelector('.success-popup-text').textContent = message;
+  popup.classList.add('show');
+  popup._timer = setTimeout(function () { popup.classList.remove('show'); }, 2800);
 }
 
 // ─── Auth UI (navbar button + greeting) ──────────────────────────────────────
@@ -230,16 +248,22 @@ async function updateAuthUI() {
         greeting.textContent = `Hi, ${name}! 👋`;
         greeting.style.display = 'inline';
       }
-      if (profileBtn) profileBtn.style.display = 'inline-flex';
+      // Hide the separate profile link — authBtn takes over
+      if (profileBtn) profileBtn.style.display = 'none';
 
-      // Auth button → Sign Out
+      // Auth button → Profile (or Sign Out on /profile page)
       if (btn) {
-        btn.textContent = 'Sign Out';
-        btn.onclick = async function () {
-          await signOut();
-          updateAuthUI();
-          window.showToast('Signed out successfully.');
-        };
+        const onProfile = window.location.pathname === '/profile';
+        if (onProfile) {
+          btn.textContent = 'Sign Out';
+          btn.onclick = async function () {
+            await signOut();
+            window.location.href = '/';
+          };
+        } else {
+          btn.textContent = '👤 Profile';
+          btn.onclick = function () { window.location.href = '/profile'; };
+        }
       }
     } else {
       if (greeting) greeting.style.display = 'none';
