@@ -12,6 +12,7 @@ const supabase = window.supabase
 
 // Check if user is logged in
 async function checkAuth() {
+    if (!supabase) return null;
     const { data: { session } } = await supabase.auth.getSession();
     return session;
 }

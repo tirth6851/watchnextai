@@ -281,6 +281,9 @@ async function updateAuthUI() {
     }
   } catch (err) {
     console.error('updateAuthUI error:', err);
+    // Ensure button is always clickable even if session check fails
+    const btn = document.getElementById('authBtn');
+    if (btn && !btn.onclick) btn.onclick = openAuthModal;
   }
 }
 
