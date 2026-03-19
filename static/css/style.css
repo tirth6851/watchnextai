@@ -1,9 +1,12 @@
 :root {
   --bg: #0b0f18;
   --fg: #eef2ff;
+  --text: #cbd5e1;
   --muted: rgba(226, 232, 240, 0.7);
   --card: rgba(255, 255, 255, 0.06);
+  --card-bg: rgba(255, 255, 255, 0.06);
   --border: rgba(148, 163, 184, 0.2);
+  --primary: #7c3aed;
   --accent: #7c3aed;
   --accent-soft: rgba(124, 58, 237, 0.18);
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
@@ -94,18 +97,20 @@ a {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: center;
+}
 
-  .content-type-tabs {
+.content-type-tabs {
   display: flex;
   gap: 8px;
-        flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .content-type-btn {
   padding: 10px 20px;
-      white-space: nowrap;
+  white-space: nowrap;
   background: transparent;
   color: var(--muted);
   border: none;
@@ -117,16 +122,14 @@ a {
 }
 
 .content-type-btn:hover {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--card);
+  color: var(--fg);
 }
 
 .content-type-btn.active {
   background: var(--primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(226, 232, 240, 0.3);
-}
-  justify-content: center;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
 }
 
 .nav-link {
