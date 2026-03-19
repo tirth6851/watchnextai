@@ -59,6 +59,10 @@ const tvNavCategories = ["trending", "popular", "top_rated", "on_air", "airing_t
 
 function applyTheme(mode) {
   document.documentElement.setAttribute("data-theme", mode);
+  const dynamicBg = document.getElementById("dynamicBg");
+  if (dynamicBg) {
+    dynamicBg.style.opacity = mode === "light" ? "0" : (dynamicBg.style.backgroundImage ? "1" : "0");
+  }
   if (mode === "dark") {
     if (themeIcon) themeIcon.textContent = "🌙";
     if (themeLabel) themeLabel.textContent = "Dark";

@@ -157,11 +157,11 @@
             if (inWatchlist) {
                 const r = await removeFromWatchlist(movieId);
                 if (r.success) { inWatchlist = false; btn.textContent = '+ Add to Watchlist'; btn.classList.remove('active'); window.showToast('Removed from watchlist.'); }
-                else window.showToast(r.error || 'Error.', 'error');
+                else { console.error('Watchlist remove error:', r.error); window.showToast(r.error || 'Error removing from watchlist.', 'error'); }
             } else {
                 const r = await addToWatchlist(movieId, 'movie', movieData?.title, movieData?.poster_path);
                 if (r.success) { inWatchlist = true; btn.textContent = '✓ In Watchlist'; btn.classList.add('active'); window.showToast('Added to watchlist!'); }
-                else window.showToast(r.error || 'Error.', 'error');
+                else { console.error('Watchlist add error:', r.error); window.showToast(r.error || 'Error adding to watchlist.', 'error'); }
             }
         }
         async function markWatched() {
@@ -169,7 +169,7 @@
             if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
             const r = await markAsWatched(movieId, 'movie', movieData?.title, null);
             if (r.success) { document.getElementById('watchedBtn').classList.add('active'); window.showToast('Marked as watched!'); }
-            else window.showToast(r.error || 'Error.', 'error');
+            else { console.error('Mark watched error:', r.error); window.showToast(r.error || 'Error marking as watched.', 'error'); }
         }
 
         async function loadMovieDetails() {
@@ -192,7 +192,10 @@
             const bg = document.getElementById('dynamicBg');
             if (!bg || !url) return;
             bg.style.backgroundImage = `url('${url}')`;
-            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+            const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+            if (theme !== 'light') {
+                requestAnimationFrame(() => { bg.style.opacity = '1'; });
+            }
         }
 
         function displayMovie(movie) {
