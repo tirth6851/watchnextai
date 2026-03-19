@@ -1068,3 +1068,269 @@ a {
     transition: opacity 1.2s ease;
     pointer-events: none;
 }
+
+html[data-theme="light"] .dynamic-bg {
+    opacity: 0 !important;
+}
+
+/* ============================================================
+   HOME PAGE
+   ============================================================ */
+
+/* Brand link reset */
+.nav-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Hero */
+.home-hero {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6rem 1.5rem 4rem;
+}
+
+.home-hero__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  filter: blur(0px) brightness(0.28) saturate(1.6);
+  transition: background-image 1.2s ease;
+  z-index: 0;
+}
+
+.home-hero__inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 640px;
+}
+
+.home-hero__title {
+  font-size: clamp(2.2rem, 6vw, 3.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.home-hero__accent {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-hero__sub {
+  color: var(--text);
+  font-size: 1.05rem;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}
+
+.home-hero__search {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.35rem 0.35rem 1.2rem;
+  backdrop-filter: blur(12px);
+}
+
+.home-hero__search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-size: 1rem;
+  min-width: 0;
+}
+
+.home-hero__search input::placeholder {
+  color: var(--muted);
+}
+
+.pill-btn--primary {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.pill-btn--primary:hover {
+  opacity: 0.88;
+}
+
+/* Sections */
+.home-section {
+  padding: 2.5rem 1.5rem 0.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.home-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.home-section__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.home-section__link {
+  font-size: 0.85rem;
+  color: var(--accent);
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.home-section__link:hover {
+  opacity: 1;
+}
+
+/* Horizontal scrolling row */
+.home-row {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.home-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-row::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.home-row__loading {
+  color: var(--muted);
+  padding: 1rem 0;
+  font-size: 0.9rem;
+}
+
+/* Home card */
+.home-card {
+  flex: 0 0 140px;
+  scroll-snap-align: start;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.home-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+}
+
+.home-card__poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+}
+
+.home-card__info {
+  padding: 0.5rem 0.55rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.home-card__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-card__meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Type badge on home cards */
+.home-card__badge {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+.home-card__badge--movie {
+  background: rgba(124, 58, 237, 0.82);
+  color: #fff;
+}
+
+.home-card__badge--tv {
+  background: rgba(16, 185, 129, 0.82);
+  color: #fff;
+}
+
+.home-card__badge--anime {
+  background: rgba(239, 68, 68, 0.82);
+  color: #fff;
+}
+
+/* Type badge on browse cards (global search results) */
+.card-type-badge {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(6px);
+}
+
+.card-type-badge--movie {
+  background: rgba(124, 58, 237, 0.82);
+  color: #fff;
+}
+
+.card-type-badge--tv {
+  background: rgba(16, 185, 129, 0.82);
+  color: #fff;
+}
+
+.card-type-badge--anime {
+  background: rgba(239, 68, 68, 0.82);
+  color: #fff;
+}

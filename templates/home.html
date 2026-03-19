@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WatchNextAI • Home</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="logo">🎬</div>
+      <div class="brand-text">
+        <div class="brand-title">WatchNextAI</div>
+        <div class="brand-subtitle">Find your next favorite</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs" id="homeNavLinks">
+      <a class="nav-link active" href="/">Home</a>
+      <a class="nav-link" href="/browse?type=movies">Movies</a>
+      <a class="nav-link" href="/browse?type=tv">TV Shows</a>
+      <a class="nav-link" href="/browse?type=anime">Anime</a>
+    </div>
+
+    <div class="nav-controls">
+      <span id="authGreeting" class="auth-greeting" style="display:none;"></span>
+      <a id="profileBtn" href="/profile" class="pill-btn" style="display:none;">👤 Profile</a>
+      <button id="themeToggle" class="pill-btn" type="button">
+        <span id="themeIcon">🌙</span>
+        <span id="themeLabel">Dark</span>
+      </button>
+      <button id="authBtn" class="pill-btn" type="button" onclick="openAuthModal()">Sign In</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Hero -->
+    <section class="home-hero">
+      <div class="home-hero__inner">
+        <h1 class="home-hero__title">Find Your Next<br/><span class="home-hero__accent">Obsession</span></h1>
+        <p class="home-hero__sub">Movies, TV shows and anime — all in one place, with AI to guide the way.</p>
+        <div class="home-hero__search">
+          <input
+            id="heroSearchInput"
+            type="search"
+            placeholder="Search movies, shows, anime…"
+            autocomplete="off"
+            aria-label="Global search"
+          />
+          <button id="heroSearchBtn" class="pill-btn pill-btn--primary" type="button">Search</button>
+        </div>
+      </div>
+      <div class="home-hero__bg" id="heroBg" aria-hidden="true"></div>
+    </section>
+
+    <!-- Personalised recommendations (shown only when signed in + has watch history) -->
+    <section class="home-section" id="recsSection" style="display:none;">
+      <div class="home-section__header">
+        <h2 class="home-section__title" id="recsTitle">✨ Because you watched</h2>
+      </div>
+      <div class="home-row" id="recsRow"></div>
+    </section>
+
+    <!-- Trending Movies -->
+    <section class="home-section">
+      <div class="home-section__header">
+        <h2 class="home-section__title">🔥 Trending Movies</h2>
+        <a href="/browse?type=movies&category=trending" class="home-section__link">See all →</a>
+      </div>
+      <div class="home-row" id="trendingMoviesRow">
+        <div class="home-row__loading">Loading…</div>
+      </div>
+    </section>
+
+    <!-- Trending TV -->
+    <section class="home-section">
+      <div class="home-section__header">
+        <h2 class="home-section__title">📺 Trending TV Shows</h2>
+        <a href="/browse?type=tv&category=trending" class="home-section__link">See all →</a>
+      </div>
+      <div class="home-row" id="trendingTvRow">
+        <div class="home-row__loading">Loading…</div>
+      </div>
+    </section>
+
+    <!-- Top Anime -->
+    <section class="home-section">
+      <div class="home-section__header">
+        <h2 class="home-section__title">🎌 Top Anime</h2>
+        <a href="/browse?type=anime" class="home-section__link">See all →</a>
+      </div>
+      <div class="home-row" id="topAnimeRow">
+        <div class="home-row__loading">Loading…</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; 2026 WatchNextAI. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="/terms">Terms &amp; Conditions</a>
+          <span>|</span>
+          <a href="/privacy">Privacy Policy</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal">
+      <button class="modal-close" onclick="closeAuthModal()" aria-label="Close">✕</button>
+      <h2 id="authModalTitle">Welcome Back</h2>
+
+      <div class="modal-field" id="nameField" style="display:none;">
+        <label for="authName">Name</label>
+        <input type="text" id="authName" placeholder="Your name" autocomplete="name" />
+      </div>
+
+      <div class="modal-field">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+
+      <div class="modal-field">
+        <label for="authPassword">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+          <button class="password-toggle" type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">👁</button>
+        </div>
+      </div>
+
+      <div id="strengthContainer" style="display:none;" class="strength-container">
+        <div class="strength-track"><div id="strengthBar" class="strength-bar"></div></div>
+        <span id="strengthLabel" class="strength-label"></span>
+      </div>
+
+      <div class="modal-error" id="authError"></div>
+
+      <button class="modal-submit" id="authSubmit" onclick="handleAuthSubmit()">Sign In</button>
+
+      <div class="modal-toggle">
+        <span id="authToggleText">Don't have an account?</span>
+        <button id="authToggleBtn" onclick="toggleAuthMode()">Sign Up</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.3/dist/umd/supabase.min.js"></script>
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/auth-modal.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/home.js') }}"></script>
+</body>
+</html>

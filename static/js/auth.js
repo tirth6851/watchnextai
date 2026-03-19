@@ -25,7 +25,10 @@ async function signUp(email, password, displayName) {
 
     if (error) {
         console.error('Sign up error:', error);
-        return { success: false, error: error.message };
+        const msg = error.message === 'Failed to fetch'
+            ? 'Cannot reach auth server. Check your internet connection or try again later.'
+            : error.message;
+        return { success: false, error: msg };
     }
 
     return { success: true, user: data.user };
@@ -37,10 +40,13 @@ async function signIn(email, password) {
         email: email,
         password: password,
     });
-    
+
     if (error) {
         console.error('Sign in error:', error);
-        return { success: false, error: error.message };
+        const msg = error.message === 'Failed to fetch'
+            ? 'Cannot reach auth server. Check your internet connection or try again later.'
+            : error.message;
+        return { success: false, error: msg };
     }
     
     return { success: true, user: data.user };

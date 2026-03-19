@@ -1,73 +1,124 @@
 # WatchNextAI 🎬
 
-> An intelligent movie recommendation web app powered by Python and machine learning, supporting Hollywood, Bollywood, and beyond.
+> A movie, TV show, and anime discovery web app powered by Flask and the TMDB API, with AI-driven recommendations, user authentication, and a personal watchlist.
 
 ---
 
-## 🌟 Key Features
-- **Personalized Recommendations:** Adapts to user ratings and preferences
-- **Multi-Industry Coverage:** Hollywood, Bollywood, Tollywood, and regional movies
-- **Sub/Dub Language Support:** Hindi, Telugu, Tamil, Punjabi, English
-- **Movie Details:** See trailers, ratings, reviews, and streaming links for every movie
-- **Trending and Popular:** Dynamic trending movie lists updated daily
-- **Watchlist/Favorites:** Save movies you want to watch or loved
+## 🌟 Features
+
+- **Movies, TV Shows & Anime** — Browse all three content types with dedicated detail pages
+- **Categories** — Discover, Trending, Popular, Top Rated, Upcoming, Now Playing, On Air, Airing Today
+- **AI Recommendations** — Powered by the Groq API for smart, context-aware suggestions
+- **Search** — Live search across the entire TMDB library
+- **User Auth** — Sign up / sign in / sign out via Supabase (email + password)
+- **Watchlist** — Save titles to your personal watchlist (requires sign in)
+- **Dark / Light Mode** — Theme toggle persisted per session
+- **Responsive UI** — Works on desktop and mobile
+- **Password Strength Meter** — Visual feedback during sign-up
+- **Profile Page** — View and manage your account
 
 ---
 
 ## 🛠 Tech Stack
-- **Backend:** Python (Flask), Pandas, NumPy, SQLite
-- **Frontend:** HTML, CSS, JavaScript (Bootstrap, Tailwind), Jinja2
-- **APIs:** TMDb, YouTube
-- **Dev Tools:** Git, GitHub
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python, Flask |
+| Frontend | HTML, CSS, Vanilla JavaScript, Jinja2 |
+| Auth & DB | Supabase (PostgreSQL) |
+| Movie Data | TMDB API |
+| AI | Groq API |
+| Deployment | Vercel |
 
 ---
 
-## 📦 Installation & Getting Started
-1. **Clone repo**
-   ```bash
-   git clone https://github.com/tirth6851/watchnextai.git
-   cd watchnextai
-   ```
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Set up TMDb/YouTube API keys**
-   - Add API keys to `.env` file
-4. **Run the Flask App**
-   ```bash
-   flask run
-   ```
+## 📦 Getting Started
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/tirth6851/watchnextai.git
+cd watchnextai
+```
+
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Set up environment variables
+
+Create a `.env` file in the root:
+```env
+TMDB_API_KEY=your_tmdb_api_key
+GROQ_API_KEY=your_groq_api_key
+```
+
+> TMDB keys are free at [themoviedb.org](https://www.themoviedb.org/settings/api).
+> Groq keys are free at [console.groq.com](https://console.groq.com).
+
+### 4. Configure Supabase auth
+
+In `static/js/auth.js`, replace the placeholders with your own project values from the [Supabase dashboard](https://supabase.com):
+```js
+const SUPABASE_URL  = 'https://your-project.supabase.co';
+const SUPABASE_ANON_KEY = 'your-anon-key';
+```
+
+### 5. Run locally
+```bash
+flask run
+```
+
+Open [http://localhost:5000](http://localhost:5000).
 
 ---
 
-## 🚀 Demo
-See latest version running at [watchnextai-orpin.vercel.app](https://watchnextai-orpin.vercel.app)
+## 🚀 Live Demo
+
+[watchnextai-orpin.vercel.app](https://watchnextai-orpin.vercel.app)
 
 ---
 
-## 🧠 Machine Learning
-- Content-based and collaborative filtering for personalized movie suggestions
-- Data pipelines for real-time trending movies
-- User behavior analytics (in development)
+## 📁 Project Structure
+
+```
+watchnextai/
+├── api/
+│   └── index.py          # Vercel serverless entry point
+├── backend/
+│   ├── app.py            # Flask app & routes
+│   └── recommender.py    # AI recommendation logic (Groq)
+├── static/
+│   ├── css/style.css
+│   └── js/
+│       ├── auth.js        # Supabase auth functions
+│       ├── auth-modal.js  # Sign in / sign up modal UI
+│       └── script.js      # Main frontend logic
+├── templates/
+│   ├── index.html         # Home / discover page
+│   ├── movie_detail.html  # Movie detail page
+│   ├── tv_detail.html     # TV show detail page
+│   ├── anime_detail.html  # Anime detail page
+│   ├── profile.html       # User profile page
+│   ├── privacy.html
+│   └── terms.html
+├── requirements.txt
+└── vercel.json
+```
 
 ---
 
-## 📚 Learning Highlights
-- Built RESTful APIs for movie data aggregation
-- Implemented responsive UI with Flask templating
-- Learned user-centric recommendation strategies
+## 👨‍💻 About
 
----
+Built by **Tirth Patel**, a CS student passionate about AI, Python, and media tech.
 
-## 👨‍💻 About Me
-I'm Tirth Patel, a CS student passionate about AI, Python, and media technology.
-- [GitHub Profile](https://github.com/tirth6851)
+- [GitHub](https://github.com/tirth6851)
 - [LinkedIn](https://www.linkedin.com/in/tirth-patel-949197346/)
 
 ---
 
 ## 📝 License
-This project is licensed under MIT. See [LICENSE](https://github.com/tirth6851/watchnextai/blob/main/LICENSE).
 
-**Last updated: November 2025**
+MIT — see [LICENSE](LICENSE).
+
+**Last updated: March 2026**

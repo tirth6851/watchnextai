@@ -192,7 +192,10 @@
             const bg = document.getElementById('dynamicBg');
             if (!bg || !url) return;
             bg.style.backgroundImage = `url('${url}')`;
-            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+            const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+            if (theme !== 'light') {
+                requestAnimationFrame(() => { bg.style.opacity = '1'; });
+            }
         }
 
         function displayAnime(anime) {
