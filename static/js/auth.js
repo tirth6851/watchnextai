@@ -2,8 +2,13 @@
 const SUPABASE_URL = 'https://lqlqurgthkdknxwwgygx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_M327T9xB7uaQFaNUZtJkRw_VmGK3L7n';
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase client — defensive in case CDN hasn't loaded yet
+if (typeof window.supabase === 'undefined') {
+    console.error('Supabase SDK not loaded. Auth features will be unavailable.');
+}
+const supabase = window.supabase
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
 // Check if user is logged in
 async function checkAuth() {

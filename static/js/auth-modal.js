@@ -180,6 +180,12 @@ async function handleAuthSubmit() {
     return;
   }
 
+  // Guard: if auth functions aren't available (Supabase failed to load), bail early
+  if (typeof signUp !== 'function' || typeof signIn !== 'function') {
+    if (errEl) errEl.textContent = 'Auth service failed to load. Please refresh the page.';
+    return;
+  }
+
   _setLoading(true);
 
   try {
