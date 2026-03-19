@@ -1334,3 +1334,87 @@ html[data-theme="light"] .dynamic-bg {
   background: rgba(239, 68, 68, 0.82);
   color: #fff;
 }
+
+/* ============================================================
+   GENRE BAR
+   ============================================================ */
+.genre-bar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+}
+
+.genre-chips {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.genre-chips::-webkit-scrollbar { display: none; }
+
+.genre-chip {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.genre-chip:hover {
+  background: var(--accent-soft);
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.genre-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(124,58,237,0.35);
+}
+
+/* ============================================================
+   HOME PAGE — AI reason + badge
+   ============================================================ */
+.home-section__badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+/* AI reason overlay on home card */
+.home-card__reason {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0.6rem 0.55rem;
+  background: linear-gradient(transparent 40%, rgba(10,10,20,0.92));
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+.home-card:hover .home-card__reason {
+  opacity: 1;
+}

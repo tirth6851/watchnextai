@@ -116,14 +116,31 @@ def get_movies():
         data, err = tmdb_get(
             "/discover/movie",
             page=page,
-            sort_by="vote_average.desc",
+            sort_by="popularity.desc",
             include_adult="false",
             include_video="false",
-            **{"vote_count.gte": 50, "with_original_language": "en"},  # Filter high-quality movies
+            **{"vote_count.gte": 200},
         )
         if err:
             return jsonify({"movies": [], "error": err}), 502
 
+        return jsonify({"movies": (data or {}).get("results", [])})
+
+    if category == "genre":
+        genre_id = request.args.get("genre_id", "")
+        if not genre_id:
+            return jsonify({"movies": [], "error": "genre_id required"}), 400
+        data, err = tmdb_get(
+            "/discover/movie",
+            page=page,
+            sort_by="popularity.desc",
+            include_adult="false",
+            include_video="false",
+            with_genres=genre_id,
+            **{"vote_count.gte": 50},
+        )
+        if err:
+            return jsonify({"movies": [], "error": err}), 502
         return jsonify({"movies": (data or {}).get("results", [])})
 
     if category in MOVIE_ENDPOINTS:
@@ -241,12 +258,28 @@ def get_tv_shows():
             return jsonify({"shows": [], "error": err}), 502
         return jsonify({"shows": (data or {}).get("results", [])})
     
+    if category == "genre":
+        genre_id = request.args.get("genre_id", "")
+        if not genre_id:
+            return jsonify({"shows": [], "error": "genre_id required"}), 400
+        data, err = tmdb_get(
+            "/discover/tv",
+            page=page,
+            sort_by="popularity.desc",
+            include_adult="false",
+            with_genres=genre_id,
+            **{"vote_count.gte": 50},
+        )
+        if err:
+            return jsonify({"shows": [], "error": err}), 502
+        return jsonify({"shows": (data or {}).get("results", [])})
+
     if category in TV_ENDPOINTS:
         data, err = tmdb_get(TV_ENDPOINTS[category], page=page)
         if err:
             return jsonify({"shows": [], "error": err}), 502
         return jsonify({"shows": (data or {}).get("results", [])})
-    
+
     return jsonify({"shows": [], "error": "Unknown category."}), 400
 
 @app.route("/api/tv/<int:tv_id>")
@@ -316,6 +349,157 @@ def get_anime_details(anime_id):
         return jsonify(response.json().get("data", {}))
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/for-you", methods=["POST"])
+def for_you():
+    """Phase 2: genre-weighted personalised picks from watch history."""
+    body = request.get_json(silent=True) or {}
+    watched = body.get("watched", [])  # [{media_id, media_type, rating}, ...]
+
+    if not watched:
+        return jsonify({"movies": [], "shows": []})
+
+    # Fetch genre details for each item in parallel (max 10)
+    def fetch_genres(item):
+        mid, mtype = item.get("media_id"), item.get("media_type")
+        rating = item.get("rating") or 5
+        if mtype == "movie":
+            data, _ = tmdb_get(f"/movie/{mid}")
+        elif mtype == "tv":
+            data, _ = tmdb_get(f"/tv/{mid}")
+        else:
+            return []
+        genres = (data or {}).get("genres", [])
+        return [(g["id"], rating) for g in genres]
+
+    genre_weights: dict = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        for pairs in ex.map(fetch_genres, watched[:10]):
+            for gid, rating in pairs:
+                genre_weights[gid] = genre_weights.get(gid, 0) + rating
+
+    if not genre_weights:
+        return jsonify({"movies": [], "shows": []})
+
+    top_genres = sorted(genre_weights, key=genre_weights.get, reverse=True)[:3]
+    genre_str = ",".join(str(g) for g in top_genres)
+
+    def fetch_movies():
+        data, _ = tmdb_get(
+            "/discover/movie",
+            with_genres=genre_str,
+            sort_by="popularity.desc",
+            include_adult="false",
+            **{"vote_count.gte": 100},
+        )
+        return (data or {}).get("results", [])[:12]
+
+    def fetch_shows():
+        data, _ = tmdb_get(
+            "/discover/tv",
+            with_genres=genre_str,
+            sort_by="popularity.desc",
+            include_adult="false",
+            **{"vote_count.gte": 50},
+        )
+        return (data or {}).get("results", [])[:8]
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        movies_f = ex.submit(fetch_movies)
+        shows_f = ex.submit(fetch_shows)
+        movies = movies_f.result()
+        shows = shows_f.result()
+
+    for m in movies:
+        m["media_type"] = "movie"
+    for s in shows:
+        s["media_type"] = "tv"
+
+    return jsonify({"results": movies + shows})
+
+
+@app.route("/api/ai-picks", methods=["POST"])
+def ai_picks():
+    """Phase 3: Groq-powered personalised recommendations."""
+    if not groq_client:
+        return jsonify({"error": "AI service not available."}), 503
+
+    body = request.get_json(silent=True) or {}
+    titles = body.get("titles", [])  # [{title, type, rating}, ...]
+
+    if not titles:
+        return jsonify({"picks": []})
+
+    history_lines = "\n".join(
+        f'- "{t["title"]}" ({t.get("type","media")}) — rated {t.get("rating","?")} /10'
+        for t in titles[:8]
+    )
+
+    prompt = f"""You are a movie, TV show, and anime recommendation engine.
+
+Based on this user's watch history:
+{history_lines}
+
+Suggest exactly 8 titles they would love. Include a mix of movies, TV shows, and anime if relevant.
+
+Return ONLY a valid JSON array — no markdown, no extra text:
+[
+  {{"title": "...", "type": "movie|tv|anime", "reason": "one short sentence why"}},
+  ...
+]"""
+
+    try:
+        completion = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+            max_tokens=600,
+        )
+        raw = completion.choices[0].message.content.strip()
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        import json as _json
+        suggestions = _json.loads(raw)
+    except Exception as e:
+        return jsonify({"error": f"AI error: {e}"}), 500
+
+    # Search TMDB/Jikan for each suggestion to get real poster/id
+    def resolve(item):
+        title, mtype = item.get("title", ""), item.get("type", "movie")
+        reason = item.get("reason", "")
+        if mtype == "anime":
+            try:
+                resp = requests.get(
+                    f"{JIKAN_BASE_URL}/anime",
+                    params={"q": title, "limit": 1},
+                    timeout=REQUEST_TIMEOUT,
+                )
+                resp.raise_for_status()
+                results = resp.json().get("data", [])
+                if results:
+                    results[0]["media_type"] = "anime"
+                    results[0]["_reason"] = reason
+                    return results[0]
+            except Exception:
+                pass
+        else:
+            endpoint = "/search/movie" if mtype == "movie" else "/search/tv"
+            data, _ = tmdb_get(endpoint, query=title, page=1, include_adult="false")
+            results = (data or {}).get("results", [])
+            if results:
+                results[0]["media_type"] = mtype
+                results[0]["_reason"] = reason
+                return results[0]
+        return None
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        picks = [r for r in ex.map(resolve, suggestions) if r]
+
+    return jsonify({"picks": picks})
 
 
 @app.route("/api/recommendations")

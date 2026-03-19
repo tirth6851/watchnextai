@@ -140,14 +140,8 @@ function makeMixedCard(item) {
   return makeMovieCard(item);
 }
 
-// ---- Personalised "Because you watched" row ----
-async function loadRecommendations() {
-  if (!supabase) return;
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return;
-
-  // Fetch the most recently watched movie or TV item (anime not supported by TMDB recs)
+// ---- Phase 1: "Because you watched" row ----
+async function loadRecommendations(session) {
   const { data: watched, error } = await supabase
     .from("watched")
     .select("media_id, media_type, title")
@@ -157,7 +151,6 @@ async function loadRecommendations() {
     .limit(1);
 
   if (error || !watched || watched.length === 0) return;
-
   const seed = watched[0];
 
   const resp = await fetch(`/api/recommendations?media_type=${seed.media_type}&media_id=${seed.media_id}`);
@@ -177,9 +170,118 @@ async function loadRecommendations() {
   section.style.display = "";
 }
 
+// ---- Phase 2: genre-taste "Picked for you" row ----
+async function loadForYou(session) {
+  const { data: watched, error } = await supabase
+    .from("watched")
+    .select("media_id, media_type, title, rating")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error || !watched || watched.length < 2) return;
+
+  const payload = watched.map((w) => ({
+    media_id: w.media_id,
+    media_type: w.media_type,
+    rating: w.rating || 5,
+  }));
+
+  const resp = await fetch("/api/for-you", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ watched: payload }),
+  });
+  if (!resp.ok) return;
+  const data = await resp.json();
+  const items = (data.results || []).slice(0, 20);
+  if (!items.length) return;
+
+  const section = document.getElementById("forYouSection");
+  const row = document.getElementById("forYouRow");
+  if (!section || !row) return;
+
+  row.innerHTML = "";
+  items.forEach((item) => row.appendChild(makeMixedCard(item)));
+  section.style.display = "";
+}
+
+// ---- Phase 3: AI picks row ----
+async function loadAiPicks(session) {
+  const { data: watched, error } = await supabase
+    .from("watched")
+    .select("media_id, media_type, title, rating")
+    .eq("user_id", session.user.id)
+    .not("rating", "is", null)
+    .order("rating", { ascending: false })
+    .limit(8);
+
+  if (error || !watched || watched.length < 2) return;
+
+  const titles = watched.map((w) => ({
+    title: w.title,
+    type: w.media_type,
+    rating: w.rating,
+  }));
+
+  const section = document.getElementById("aiPicksSection");
+  const row = document.getElementById("aiPicksRow");
+  if (!section || !row) return;
+
+  // Show loading state
+  section.style.display = "";
+  row.innerHTML = `<div class="home-row__loading">🤖 AI is thinking…</div>`;
+
+  const resp = await fetch("/api/ai-picks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ titles }),
+  });
+
+  if (!resp.ok) {
+    section.style.display = "none";
+    return;
+  }
+
+  const data = await resp.json();
+  const picks = (data.picks || []).slice(0, 8);
+  if (!picks.length) {
+    section.style.display = "none";
+    return;
+  }
+
+  row.innerHTML = "";
+  picks.forEach((item) => {
+    const card = makeMixedCard(item);
+    if (!card) return;
+    // Add AI reason tooltip
+    if (item._reason) {
+      const reason = document.createElement("div");
+      reason.className = "home-card__reason";
+      reason.textContent = item._reason;
+      card.appendChild(reason);
+    }
+    row.appendChild(card);
+  });
+}
+
+// ---- Load all personalised rows ----
+async function loadPersonalised() {
+  if (!supabase) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+
+  // Run all three phases in parallel
+  await Promise.allSettled([
+    loadRecommendations(session),
+    loadForYou(session),
+    loadAiPicks(session),
+  ]);
+}
+
 // ---- Init ----
 loadHeroBg();
-loadRecommendations();
+loadPersonalised();
 populateRow("trendingMoviesRow", "/api/movies?category=trending&page=1", makeMovieCard, "movies");
 populateRow("trendingTvRow", "/api/tv_shows?category=trending&page=1", makeTvCard, "shows");
 populateRow("topAnimeRow", "/api/anime?category=top&page=1", makeAnimeCard, "anime");

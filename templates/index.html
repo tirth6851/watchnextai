@@ -61,6 +61,35 @@
     </div>
   </nav>
 
+  <!-- Genre filter chips — shown below navbar -->
+  <div class="genre-bar" id="genreBar">
+    <div class="genre-chips" id="genreChips">
+      <button class="genre-chip active" data-genre="">All</button>
+      <!-- movie genres -->
+      <button class="genre-chip genre-chip--movie" data-genre="28">Action</button>
+      <button class="genre-chip genre-chip--movie" data-genre="12">Adventure</button>
+      <button class="genre-chip genre-chip--movie" data-genre="16">Animation</button>
+      <button class="genre-chip genre-chip--movie" data-genre="35">Comedy</button>
+      <button class="genre-chip genre-chip--movie" data-genre="80">Crime</button>
+      <button class="genre-chip genre-chip--movie" data-genre="99">Documentary</button>
+      <button class="genre-chip genre-chip--movie" data-genre="18">Drama</button>
+      <button class="genre-chip genre-chip--movie" data-genre="14">Fantasy</button>
+      <button class="genre-chip genre-chip--movie" data-genre="27">Horror</button>
+      <button class="genre-chip genre-chip--movie" data-genre="10749">Romance</button>
+      <button class="genre-chip genre-chip--movie" data-genre="878">Sci-Fi</button>
+      <button class="genre-chip genre-chip--movie" data-genre="53">Thriller</button>
+      <!-- tv-specific genres (hidden by default, shown when TV tab active) -->
+      <button class="genre-chip genre-chip--tv" data-genre="10759" style="display:none;">Action &amp; Adventure</button>
+      <button class="genre-chip genre-chip--tv" data-genre="35" style="display:none;">Comedy</button>
+      <button class="genre-chip genre-chip--tv" data-genre="80" style="display:none;">Crime</button>
+      <button class="genre-chip genre-chip--tv" data-genre="99" style="display:none;">Documentary</button>
+      <button class="genre-chip genre-chip--tv" data-genre="18" style="display:none;">Drama</button>
+      <button class="genre-chip genre-chip--tv" data-genre="9648" style="display:none;">Mystery</button>
+      <button class="genre-chip genre-chip--tv" data-genre="10765" style="display:none;">Sci-Fi &amp; Fantasy</button>
+      <button class="genre-chip genre-chip--tv" data-genre="16" style="display:none;">Animation</button>
+    </div>
+  </div>
+
   <main class="page">
     {% if error_message %}
       <div class="toast toast-error show">{{ error_message }}</div>

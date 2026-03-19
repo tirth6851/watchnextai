@@ -54,7 +54,25 @@
       <div class="home-hero__bg" id="heroBg" aria-hidden="true"></div>
     </section>
 
-    <!-- Personalised recommendations (shown only when signed in + has watch history) -->
+    <!-- AI picks (Phase 3 — shown when signed in + has rated history) -->
+    <section class="home-section" id="aiPicksSection" style="display:none;">
+      <div class="home-section__header">
+        <h2 class="home-section__title">🤖 AI Picks For You</h2>
+        <span class="home-section__badge">Powered by AI</span>
+      </div>
+      <div class="home-row" id="aiPicksRow"></div>
+    </section>
+
+    <!-- Genre taste picks (Phase 2 — shown when signed in + has watch history) -->
+    <section class="home-section" id="forYouSection" style="display:none;">
+      <div class="home-section__header">
+        <h2 class="home-section__title">🎯 Picked For You</h2>
+        <span class="home-section__badge">Based on your taste</span>
+      </div>
+      <div class="home-row" id="forYouRow"></div>
+    </section>
+
+    <!-- Personalised recommendations (Phase 1 — shown only when signed in + has watch history) -->
     <section class="home-section" id="recsSection" style="display:none;">
       <div class="home-section__header">
         <h2 class="home-section__title" id="recsTitle">✨ Because you watched</h2>

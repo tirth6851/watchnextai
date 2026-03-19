@@ -6,6 +6,7 @@ const state = {
   currentQuery: "",
   currentContentType: "movies",
   isGlobalSearch: false,
+  currentGenre: "",   // TMDB genre_id, empty = all
 };
 
 const container = document.getElementById("movie-container");
@@ -110,10 +111,40 @@ function updateNavForContentType() {
     } else if (type === "tv") {
       btn.style.display = tvNavCategories.includes(cat) ? "" : "none";
     } else {
-      // anime — hide all category nav
       btn.style.display = "none";
     }
   });
+
+  // Toggle genre chips visibility
+  const genreChips = document.getElementById("genreChips");
+  const genreBar = document.getElementById("genreBar");
+  if (!genreChips) return;
+  if (type === "anime") {
+    if (genreBar) genreBar.style.display = "none";
+    return;
+  }
+  if (genreBar) genreBar.style.display = "";
+  genreChips.querySelectorAll(".genre-chip").forEach((chip) => {
+    if (!chip.dataset.genre) return; // "All" chip — always show
+    if (chip.classList.contains("genre-chip--movie")) {
+      chip.style.display = type === "movies" ? "" : "none";
+    } else if (chip.classList.contains("genre-chip--tv")) {
+      chip.style.display = type === "tv" ? "" : "none";
+    }
+  });
+}
+
+function handleGenreClick(event) {
+  const chip = event.target.closest(".genre-chip");
+  if (!chip) return;
+  state.currentGenre = chip.dataset.genre || "";
+  state.currentQuery = "";
+  state.isGlobalSearch = false;
+  if (searchInput) searchInput.value = "";
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.remove("active"));
+  chip.classList.add("active");
+  updateHeader();
+  resetAndLoad();
 }
 
 function updateHeader() {
@@ -126,6 +157,13 @@ function updateHeader() {
   if (state.currentQuery) {
     pageTitle.textContent = `🔎 Results for "${state.currentQuery}"`;
     pageHint.textContent = "Searching the full library.";
+    return;
+  }
+  if (state.currentGenre) {
+    const chip = document.querySelector(`.genre-chip[data-genre="${state.currentGenre}"]`);
+    const label = chip ? chip.textContent.trim() : state.currentGenre;
+    pageTitle.textContent = `🎭 ${label}`;
+    pageHint.textContent = "Filtered by genre.";
     return;
   }
   if (state.currentContentType === "movies") {
@@ -273,9 +311,11 @@ function renderMixedCard(item) {
 // ---- Fetch functions ----
 
 async function fetchMovies(page) {
-  const category = state.currentQuery ? "search" : state.currentCategory;
+  let category = state.currentQuery ? "search" : state.currentCategory;
+  if (state.currentGenre && !state.currentQuery) category = "genre";
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
+  if (state.currentGenre && !state.currentQuery) params.set("genre_id", state.currentGenre);
 
   const response = await fetch(`/api/movies?${params.toString()}`);
   if (!response.ok) {
@@ -286,9 +326,11 @@ async function fetchMovies(page) {
 }
 
 async function fetchTvShows(page) {
-  const category = state.currentQuery ? "search" : state.currentCategory;
+  let category = state.currentQuery ? "search" : state.currentCategory;
+  if (state.currentGenre && !state.currentQuery) category = "genre";
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
+  if (state.currentGenre && !state.currentQuery) params.set("genre_id", state.currentGenre);
 
   const response = await fetch(`/api/tv_shows?${params.toString()}`);
   if (!response.ok) {
@@ -428,6 +470,8 @@ function runServerSearch() {
   const q = (searchInput?.value || "").trim();
   state.currentQuery = q;
   state.isGlobalSearch = q.length > 0;
+  state.currentGenre = "";
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.toggle("active", !c.dataset.genre));
   updateHeader();
   // Show all content-type tabs as inactive during global search
   if (state.isGlobalSearch) {
@@ -443,7 +487,9 @@ function handleCategoryClick(event) {
   state.currentCategory = button.dataset.category;
   state.currentQuery = "";
   state.isGlobalSearch = false;
+  state.currentGenre = "";
   if (searchInput) searchInput.value = "";
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.toggle("active", !c.dataset.genre));
   localStorage.setItem("wn_category", state.currentCategory);
 
   setActiveCategoryButton(state.currentCategory);
@@ -462,7 +508,9 @@ function handleContentTypeClick(event) {
   state.currentContentType = type;
   state.currentQuery = "";
   state.isGlobalSearch = false;
+  state.currentGenre = "";
   if (searchInput) searchInput.value = "";
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.toggle("active", !c.dataset.genre));
 
   // Set a default category for the new type
   if (type === "movies") {
@@ -513,6 +561,9 @@ if (searchInput) {
 
 const contentTypeTabs = document.getElementById("contentTypeTabs");
 if (contentTypeTabs) contentTypeTabs.addEventListener("click", handleContentTypeClick);
+
+const genreChipsEl = document.getElementById("genreChips");
+if (genreChipsEl) genreChipsEl.addEventListener("click", handleGenreClick);
 
 loadTheme();
 
