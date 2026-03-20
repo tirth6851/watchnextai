@@ -79,7 +79,18 @@
                     <p id="showOverview" class="detail-overview"></p>
                     <div class="detail-actions">
                         <button id="watchlistBtn" class="action-btn" onclick="toggleWatchlist()">+ Add to Watchlist</button>
-                        <button id="watchedBtn" class="action-btn" onclick="markWatched()">✓ Mark as Watched</button>
+                        <button id="watchedBtn" class="action-btn" onclick="showRatingWidget()">✓ Mark as Watched</button>
+                    </div>
+                    <div class="star-rating-widget" id="starRatingWidget">
+                        <span>Rate it:</span>
+                        <div class="stars" id="starContainer">
+                            <button class="star-btn" data-value="1">★</button>
+                            <button class="star-btn" data-value="2">★</button>
+                            <button class="star-btn" data-value="3">★</button>
+                            <button class="star-btn" data-value="4">★</button>
+                            <button class="star-btn" data-value="5">★</button>
+                        </div>
+                        <button class="action-btn" onclick="submitRating(0)" style="font-size:.78rem;padding:.3rem .7rem;">Skip</button>
                     </div>
                 </div>
             </div>
@@ -89,6 +100,16 @@
                 <iframe id="trailerIframe" src="" title="Show Trailer" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
+            </div>
+
+            <div class="cast-section" id="castSection" style="display:none;">
+                <h2>🎭 Cast</h2>
+                <div class="cast-grid" id="castGrid"></div>
+            </div>
+
+            <div class="more-like-section" id="moreLikeSection" style="display:none;">
+                <h2>More Like This</h2>
+                <div class="more-like-grid" id="moreLikeGrid"></div>
             </div>
 
             <div class="chatbot-container">
@@ -163,12 +184,32 @@
                 else window.showToast(r.error || 'Error.', 'error');
             }
         }
-        async function markWatched() {
+        function showRatingWidget() {
+            document.getElementById('watchedBtn').style.display = 'none';
+            const widget = document.getElementById('starRatingWidget');
+            widget.classList.add('visible');
+            const stars = widget.querySelectorAll('.star-btn');
+            stars.forEach(s => {
+                s.addEventListener('mouseenter', () => {
+                    const v = +s.dataset.value;
+                    stars.forEach(x => x.classList.toggle('hovered', +x.dataset.value <= v));
+                });
+                s.addEventListener('mouseleave', () => stars.forEach(x => x.classList.remove('hovered')));
+                s.addEventListener('click', () => submitRating(+s.dataset.value));
+            });
+        }
+        async function submitRating(rating) {
+            document.getElementById('starRatingWidget').classList.remove('visible');
+            const btn = document.getElementById('watchedBtn');
+            btn.style.display = '';
             const session = await checkAuth();
             if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const r = await markAsWatched(tvId, 'tv', showData?.name, null);
-            if (r.success) { document.getElementById('watchedBtn').classList.add('active'); window.showToast('Marked as watched!'); }
-            else window.showToast(r.error || 'Error.', 'error');
+            const r = await markAsWatched(tvId, 'tv', showData?.name, rating || null);
+            if (r.success) {
+                btn.classList.add('active');
+                btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';
+                window.showToast(rating ? `Marked as watched! (${rating}/5)` : 'Marked as watched!');
+            } else { window.showToast(r.error || 'Error.', 'error'); }
         }
 
         async function loadShowDetails() {
@@ -180,6 +221,8 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('showContent').style.display = 'block';
                 loadTrailer();
+                loadCast();
+                loadRecommendations();
             } catch {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
@@ -217,6 +260,44 @@
             if (show.genres?.length)     html += `<span class="chip">${show.genres.map(g=>g.name).join(', ')}</span>`;
             document.getElementById('showStats').innerHTML = html;
             document.getElementById('showOverview').textContent = show.overview || 'No overview available.';
+        }
+
+        async function loadCast() {
+            try {
+                const res = await fetch(`/api/tv/${tvId}/credits`);
+                if (!res.ok) return;
+                const { cast = [] } = await res.json();
+                if (!cast.length) return;
+                const grid = document.getElementById('castGrid');
+                cast.forEach(m => {
+                    const img = m.profile_path
+                        ? `https://image.tmdb.org/t/p/w185${m.profile_path}`
+                        : 'https://via.placeholder.com/72x72?text=?';
+                    const el = document.createElement('div');
+                    el.className = 'cast-card';
+                    el.innerHTML = `<img class="cast-avatar" src="${img}" alt="${m.name||''}" loading="lazy"><p class="cast-name">${m.name||''}</p><p class="cast-character">${m.character||''}</p>`;
+                    grid.appendChild(el);
+                });
+                document.getElementById('castSection').style.display = 'block';
+            } catch {}
+        }
+
+        async function loadRecommendations() {
+            try {
+                const res = await fetch(`/api/recommendations?media_type=tv&media_id=${tvId}`);
+                if (!res.ok) return;
+                const { results = [] } = await res.json();
+                if (!results.length) return;
+                const grid = document.getElementById('moreLikeGrid');
+                results.slice(0, 12).forEach(item => {
+                    const a = document.createElement('a');
+                    a.className = 'more-like-card';
+                    a.href = `/tv/${item.id}`;
+                    a.innerHTML = `<img src="${item.poster_path ? 'https://image.tmdb.org/t/p/w342'+item.poster_path : 'https://via.placeholder.com/130x190'}" alt="${item.name||''}" loading="lazy"><div class="more-like-card-title">${item.name||'Untitled'}</div>`;
+                    grid.appendChild(a);
+                });
+                document.getElementById('moreLikeSection').style.display = 'block';
+            } catch {}
         }
 
         async function loadTrailer() {
