@@ -9,6 +9,78 @@ const state = {
   currentGenreId: null,
 };
 
+// Genre maps loaded once at startup: { movie: {28: "Action", ...}, tv: {...} }
+const genreMap = { movie: {}, tv: {} };
+
+async function loadGenreMaps() {
+  try {
+    const [mr, tr] = await Promise.all([
+      fetch("/api/genres?type=movie"),
+      fetch("/api/genres?type=tv"),
+    ]);
+    const { genres: mg = [] } = await mr.json();
+    const { genres: tg = [] } = await tr.json();
+    mg.forEach((g) => { genreMap.movie[g.id] = g.name; });
+    tg.forEach((g) => { genreMap.tv[g.id]    = g.name; });
+  } catch {}
+}
+
+function genreTagsHtml(genreIds, mediaType) {
+  const map = genreMap[mediaType] || {};
+  if (!genreIds || !genreIds.length) return "";
+  const tags = genreIds.slice(0, 3)
+    .map((id) => map[id] ? `<button class="card-genre-tag" data-gid="${id}" data-type="${mediaType}" onclick="handleGenreTagClick(event)">${map[id]}</button>` : "")
+    .join("");
+  return tags ? `<div class="card-genres">${tags}</div>` : "";
+}
+
+function animeGenreTagsHtml(genres) {
+  if (!genres || !genres.length) return "";
+  const tags = genres.slice(0, 3)
+    .map((g) => `<span class="card-genre-tag">${g.name}</span>`)
+    .join("");
+  return tags ? `<div class="card-genres">${tags}</div>` : "";
+}
+
+function handleGenreTagClick(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const genreId = +e.currentTarget.dataset.gid;
+  const mediaType = e.currentTarget.dataset.type; // 'movie' or 'tv'
+  const tabType = mediaType === "movie" ? "movies" : "tv";
+
+  // Switch tab if needed
+  if (state.currentContentType !== tabType) {
+    state.currentContentType = tabType;
+    document.querySelectorAll(".content-type-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.type === tabType)
+    );
+    state.currentCategory = tabType === "movies"
+      ? (localStorage.getItem("wn_category") || "discover")
+      : "popular";
+    const sugSection = document.getElementById("suggestionsSection");
+    if (sugSection) sugSection.style.display = "none";
+    const mainGrid = document.getElementById("movie-container");
+    if (mainGrid) mainGrid.style.display = "";
+    updateNavForContentType();
+    setActiveCategoryButton(state.currentCategory);
+    updateHeader();
+  }
+
+  state.currentGenreId = genreId;
+  state.currentQuery = "";
+  state.isGlobalSearch = false;
+  if (searchInput) searchInput.value = "";
+
+  // Reload genre bar then mark chip active
+  loadGenreBar(tabType).then(() => {
+    document.querySelectorAll(".genre-chip").forEach((c) =>
+      c.classList.toggle("active", c.dataset.gid === String(genreId))
+    );
+  });
+  resetAndLoad();
+}
+
 const container = document.getElementById("movie-container");
 const loading = document.getElementById("loading");
 const toast = document.getElementById("toast");
@@ -185,6 +257,7 @@ function renderMovieCard(movie) {
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "0.0";
   const releaseYear = movie.release_date ? movie.release_date.slice(0, 4) : "TBA";
   const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--movie">Movie</span>` : "";
+  const genres = genreTagsHtml(movie.genre_ids, "movie");
 
   card.innerHTML = `
     <div class="card-glare"></div>
@@ -198,6 +271,7 @@ function renderMovieCard(movie) {
         <span class="rating">⭐ ${rating}</span>
         <span class="release">${releaseYear}</span>
       </div>
+      ${genres}
     </div>
   `;
   addTiltEffect(card);
@@ -216,6 +290,7 @@ function renderTvCard(show) {
   const rating = show.vote_average ? show.vote_average.toFixed(1) : "0.0";
   const year = show.first_air_date ? show.first_air_date.slice(0, 4) : "TBA";
   const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--tv">TV</span>` : "";
+  const genres = genreTagsHtml(show.genre_ids, "tv");
 
   card.innerHTML = `
     <div class="card-glare"></div>
@@ -229,6 +304,7 @@ function renderTvCard(show) {
         <span class="rating">⭐ ${rating}</span>
         <span class="release">${year}</span>
       </div>
+      ${genres}
     </div>
   `;
   addTiltEffect(card);
@@ -244,6 +320,7 @@ function renderAnimeCard(anime) {
   const rating = anime.score ? anime.score.toFixed(1) : "N/A";
   const year = anime.aired?.from ? anime.aired.from.slice(0, 4) : "TBA";
   const badge = state.isGlobalSearch ? `<span class="card-type-badge card-type-badge--anime">Anime</span>` : "";
+  const genres = animeGenreTagsHtml(anime.genres);
 
   card.innerHTML = `
     <div class="card-glare"></div>
@@ -257,6 +334,7 @@ function renderAnimeCard(anime) {
         <span class="rating">⭐ ${rating}</span>
         <span class="release">${year}</span>
       </div>
+      ${genres}
     </div>
   `;
   addTiltEffect(card);
@@ -474,12 +552,14 @@ async function loadGenreBar(type) {
     const allChip = document.createElement("button");
     allChip.className = "genre-chip" + (state.currentGenreId === null ? " active" : "");
     allChip.textContent = "All";
+    allChip.dataset.gid = "";
     allChip.onclick = () => selectGenre(null);
     bar.appendChild(allChip);
     genres.forEach((g) => {
       const chip = document.createElement("button");
       chip.className = "genre-chip" + (state.currentGenreId === g.id ? " active" : "");
       chip.textContent = g.name;
+      chip.dataset.gid = String(g.id);
       chip.onclick = () => selectGenre(g.id);
       bar.appendChild(chip);
     });
@@ -489,22 +569,70 @@ async function loadGenreBar(type) {
 
 function selectGenre(genreId) {
   state.currentGenreId = genreId;
-  document.querySelectorAll(".genre-chip").forEach((c) => {
-    c.classList.toggle("active", genreId === null ? c.textContent === "All" : c.textContent !== "All" && c.onclick.toString().includes(genreId));
-  });
-  // Re-mark active chip correctly
-  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.remove("active"));
   const bar = document.getElementById("genreBar");
   if (bar) {
     bar.querySelectorAll(".genre-chip").forEach((c) => {
-      if (genreId === null) { if (c.textContent === "All") c.classList.add("active"); }
-      else { if (c.textContent !== "All" && c.dataset.gid === String(genreId)) c.classList.add("active"); }
+      c.classList.toggle("active",
+        genreId === null ? c.dataset.gid === "" : c.dataset.gid === String(genreId)
+      );
     });
   }
   resetAndLoad();
 }
 
-// For You / Suggestions tab
+// ---- For You full page ----
+
+function _fyPosterUrl(item) {
+  const p = item.poster_path;
+  if (!p) return "https://via.placeholder.com/280x420?text=No+Image";
+  if (p.startsWith("http")) return p;
+  return `https://image.tmdb.org/t/p/w342${p}`;
+}
+
+function _fyDetailUrl(item) {
+  if (item.media_type === "tv")    return `/tv/${item.media_id}`;
+  if (item.media_type === "anime") return `/anime/${item.media_id}`;
+  return `/movie/${item.media_id}`;
+}
+
+function makeFyCard(item) {
+  const a = document.createElement("a");
+  a.className = "foryou-card";
+  a.href = _fyDetailUrl(item);
+  const typeLabel = item.media_type === "tv" ? "TV" : item.media_type === "anime" ? "Anime" : "Movie";
+  a.innerHTML = `
+    <img src="${_fyPosterUrl(item)}" alt="${item.title || ""}" loading="lazy" />
+    <div class="foryou-card-info">
+      <div class="foryou-card-title">${item.title || "Untitled"}</div>
+      <div class="foryou-card-meta">
+        <span class="foryou-type-badge ${item.media_type}">${typeLabel}</span>
+      </div>
+    </div>`;
+  return a;
+}
+
+function makeRecCard(r, mediaType) {
+  const a = document.createElement("a");
+  a.className = "more-like-card";
+  a.href = mediaType === "anime" ? `/anime/${r.mal_id}` : `/${mediaType}/${r.id}`;
+  const title = r.title || r.name || "Untitled";
+  const poster = mediaType === "anime"
+    ? (r.images?.jpg?.image_url || "https://via.placeholder.com/130x190")
+    : (r.poster_path ? `https://image.tmdb.org/t/p/w342${r.poster_path}` : "https://via.placeholder.com/130x190");
+  a.innerHTML = `<img src="${poster}" alt="${title}" loading="lazy"><div class="more-like-card-title">${title}</div>`;
+  return a;
+}
+
+function makeFySection(headerHtml, count) {
+  const sec = document.createElement("div");
+  sec.className = "foryou-section";
+  const hdr = document.createElement("div");
+  hdr.className = "foryou-section-header";
+  hdr.innerHTML = `<h2>${headerHtml}</h2>${count !== undefined ? `<span class="foryou-count">${count} title${count !== 1 ? "s" : ""}</span>` : ""}`;
+  sec.appendChild(hdr);
+  return sec;
+}
+
 async function loadSuggestions() {
   const section = document.getElementById("suggestionsSection");
   const content = document.getElementById("suggestionsContent");
@@ -520,86 +648,97 @@ async function loadSuggestions() {
   // Check auth
   const session = await (typeof checkAuth === "function" ? checkAuth() : Promise.resolve(null));
   if (!session) {
-    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🔒</p><p>Sign in to get personalised suggestions based on your watch history.</p><button class="pill-btn" onclick="openAuthModal()" style="background:var(--accent);color:white;border-color:var(--accent);margin-top:1rem;">Sign In</button></div>`;
+    content.innerHTML = `<div class="foryou-page"><div class="foryou-empty"><div class="foryou-empty-icon">🔒</div><h3>Sign in to see your picks</h3><p>We'll personalise suggestions based on your watchlist and watch history.</p><button class="pill-btn" onclick="openAuthModal()" style="background:var(--accent);color:white;border-color:var(--accent);">Sign In</button></div></div>`;
     if (loadingEl) loadingEl.style.display = "none";
     return;
   }
 
-  // Load user's watched history
-  let watchedItems = [];
+  // Load watchlist + watched in parallel
+  let watchlistItems = [], watchedItems = [];
   try {
-    const wd = await getWatched();
-    watchedItems = wd.success ? (wd.data || []) : [];
+    const [wl, wd] = await Promise.all([
+      (typeof getWatchlist === "function" ? getWatchlist() : Promise.resolve({ success: false })),
+      (typeof getWatched   === "function" ? getWatched()   : Promise.resolve({ success: false })),
+    ]);
+    watchlistItems = wl.success ? (wl.data || []) : [];
+    watchedItems   = wd.success ? (wd.data || []) : [];
   } catch {}
 
-  if (!watchedItems.length) {
-    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🎬</p><p>No watch history yet.</p><p>Start watching movies, shows, and anime to get personalised suggestions!</p></div>`;
-    if (loadingEl) loadingEl.style.display = "none";
-    return;
+  // Get user name
+  const name = session.user?.user_metadata?.full_name
+    || session.user?.email?.split("@")[0]
+    || "there";
+
+  const page = document.createElement("div");
+  page.className = "foryou-page";
+
+  // Hero
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const hero = document.createElement("div");
+  hero.className = "foryou-hero";
+  hero.innerHTML = `<h2>✨ ${greet}, ${name}!</h2><p>Here's everything lined up for you — your queue and picks we think you'll love.</p>`;
+  page.appendChild(hero);
+
+  // ---- Watchlist section ----
+  if (watchlistItems.length) {
+    const sec = makeFySection("📋 Your Watchlist", watchlistItems.length);
+    const grid = document.createElement("div");
+    grid.className = "foryou-grid";
+    watchlistItems.forEach((item) => grid.appendChild(makeFyCard(item)));
+    sec.appendChild(grid);
+    page.appendChild(sec);
   }
 
-  // Pick up to 3 recent watched items to generate recommendations from
-  const recent = watchedItems.slice(-3).reverse();
-  let foundAny = false;
+  // ---- Recommendation rows from watch history ----
+  const recentNonAnime = watchedItems.filter((i) => i.media_type !== "anime").slice(-4).reverse();
+  const recentAnime    = watchedItems.filter((i) => i.media_type === "anime").slice(-2).reverse();
 
-  for (const item of recent) {
-    if (item.media_type === "anime") continue; // anime handled separately
+  for (const item of recentNonAnime) {
     try {
       const res = await fetch(`/api/recommendations?media_type=${item.media_type}&media_id=${item.media_id}`);
       if (!res.ok) continue;
       const { results = [] } = await res.json();
       if (!results.length) continue;
-      foundAny = true;
-
-      const group = document.createElement("div");
-      group.className = "suggestions-group";
-      group.innerHTML = `<h3>Because you watched <em>${item.title || "something"}</em></h3>`;
+      const sec = makeFySection(`Because you watched <em>${item.title || "this"}</em>`);
       const row = document.createElement("div");
       row.className = "more-like-grid";
-      results.slice(0, 12).forEach((r) => {
-        const a = document.createElement("a");
-        a.className = "more-like-card";
-        a.href = `/${item.media_type}/${r.id}`;
-        const title = r.title || r.name || "Untitled";
-        a.innerHTML = `<img src="${r.poster_path ? "https://image.tmdb.org/t/p/w342"+r.poster_path : "https://via.placeholder.com/130x190"}" alt="${title}" loading="lazy"><div class="more-like-card-title">${title}</div>`;
-        row.appendChild(a);
-      });
-      group.appendChild(row);
-      content.appendChild(group);
+      results.slice(0, 12).forEach((r) => row.appendChild(makeRecCard(r, item.media_type)));
+      sec.appendChild(row);
+      page.appendChild(sec);
     } catch {}
   }
 
-  // Also try anime recommendations
-  const recentAnime = watchedItems.filter((i) => i.media_type === "anime").slice(-1);
   for (const item of recentAnime) {
     try {
       const res = await fetch(`/api/anime/${item.media_id}/recommendations`);
       if (!res.ok) continue;
       const { results = [] } = await res.json();
       if (!results.length) continue;
-      foundAny = true;
-
-      const group = document.createElement("div");
-      group.className = "suggestions-group";
-      group.innerHTML = `<h3>Because you watched <em>${item.title || "an anime"}</em></h3>`;
+      const sec = makeFySection(`Because you watched <em>${item.title || "this anime"}</em>`);
       const row = document.createElement("div");
       row.className = "more-like-grid";
-      results.forEach((r) => {
-        const a = document.createElement("a");
-        a.className = "more-like-card";
-        a.href = `/anime/${r.mal_id}`;
-        a.innerHTML = `<img src="${r.images?.jpg?.image_url || "https://via.placeholder.com/130x190"}" alt="${r.title||""}" loading="lazy"><div class="more-like-card-title">${r.title||"Untitled"}</div>`;
-        row.appendChild(a);
-      });
-      group.appendChild(row);
-      content.appendChild(group);
+      results.forEach((r) => row.appendChild(makeRecCard(r, "anime")));
+      sec.appendChild(row);
+      page.appendChild(sec);
     } catch {}
   }
 
-  if (!foundAny) {
-    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🤔</p><p>We couldn't find suggestions yet. Try watching a few more titles!</p></div>`;
+  // Empty state if nothing
+  if (!watchlistItems.length && !watchedItems.length) {
+    const empty = document.createElement("div");
+    empty.className = "foryou-empty";
+    empty.innerHTML = `<div class="foryou-empty-icon">🎬</div><h3>Nothing here yet</h3><p>Add movies, shows, or anime to your watchlist and start watching to get personalised picks.</p><a href="/browse" class="pill-btn" style="background:var(--accent);color:white;border-color:var(--accent);">Start Exploring</a>`;
+    page.appendChild(empty);
+  } else if (!watchedItems.length && watchlistItems.length) {
+    const hint = document.createElement("div");
+    hint.className = "foryou-empty";
+    hint.style.paddingTop = "1.5rem";
+    hint.innerHTML = `<p style="color:var(--fg-muted);">Mark titles as watched to unlock personalised recommendations.</p>`;
+    page.appendChild(hint);
   }
 
+  content.appendChild(page);
   if (loadingEl) loadingEl.style.display = "none";
 }
 
@@ -670,15 +809,88 @@ const handleScroll = throttle(() => {
   }
 }, 250);
 
+// ---- Search autocomplete ----
+
+const searchDropdown = document.getElementById("searchDropdown");
+let _acTimer = null;
+
+function hideDropdown() {
+  if (searchDropdown) searchDropdown.classList.remove("open");
+}
+
+function showDropdown(results, query) {
+  if (!searchDropdown) return;
+  searchDropdown.innerHTML = "";
+
+  if (!results.length) { hideDropdown(); return; }
+
+  // Spell-hint: if top result title starts very differently from query, show "Did you mean?"
+  const topTitle = (results[0].title || "").toLowerCase();
+  const q = query.toLowerCase().trim();
+  const similarity = q.split("").filter((c) => topTitle.includes(c)).length / Math.max(q.length, 1);
+  if (similarity < 0.6 && topTitle.length > 0 && q.length >= 3) {
+    const hint = document.createElement("div");
+    hint.className = "search-spell-hint";
+    hint.innerHTML = `Did you mean: <strong onclick="useSpellSuggestion('${results[0].title.replace(/'/g, "\\'")}')">${results[0].title}</strong>?`;
+    searchDropdown.appendChild(hint);
+  }
+
+  results.forEach((item) => {
+    const a = document.createElement("a");
+    a.className = "search-dropdown-item";
+    a.href = `/${item.media_type}/${item.id}`;
+    const thumb = item.poster_path
+      ? `https://image.tmdb.org/t/p/w92${item.poster_path}`
+      : "https://via.placeholder.com/34x50?text=?";
+    const badgeCls = `sdb--${item.media_type}`;
+    const typeLabel = item.media_type === "tv" ? "TV Show" : "Movie";
+    a.innerHTML = `
+      <img class="search-dropdown-thumb" src="${thumb}" alt="${item.title || ""}" loading="lazy" />
+      <div class="search-dropdown-info">
+        <div class="search-dropdown-title">${item.title || "Untitled"}</div>
+        <div class="search-dropdown-sub">${item.year || "—"}</div>
+      </div>
+      <span class="search-dropdown-badge ${badgeCls}">${typeLabel}</span>`;
+    a.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus on input
+    searchDropdown.appendChild(a);
+  });
+
+  searchDropdown.classList.add("open");
+}
+
+function useSpellSuggestion(title) {
+  if (searchInput) searchInput.value = title;
+  hideDropdown();
+  runServerSearch();
+}
+
+async function triggerAutocomplete(query) {
+  if (!query || query.length < 2) { hideDropdown(); return; }
+  try {
+    const res = await fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`);
+    if (!res.ok) return;
+    const { results = [] } = await res.json();
+    showDropdown(results, query);
+  } catch {}
+}
+
 if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
 if (navLinks) navLinks.addEventListener("click", handleCategoryClick);
-if (searchInput) searchInput.addEventListener("input", handleSearchInput);
-if (searchBtn) searchBtn.addEventListener("click", runServerSearch);
 if (searchInput) {
-  searchInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") runServerSearch();
+  searchInput.addEventListener("input", (e) => {
+    handleSearchInput(e);
+    clearTimeout(_acTimer);
+    const q = e.target.value.trim();
+    if (!q) { hideDropdown(); return; }
+    _acTimer = setTimeout(() => triggerAutocomplete(q), 280);
   });
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { hideDropdown(); runServerSearch(); }
+    if (event.key === "Escape") hideDropdown();
+  });
+  searchInput.addEventListener("blur", () => setTimeout(hideDropdown, 150));
 }
+if (searchBtn) searchBtn.addEventListener("click", () => { hideDropdown(); runServerSearch(); });
 
 const contentTypeTabs = document.getElementById("contentTypeTabs");
 if (contentTypeTabs) contentTypeTabs.addEventListener("click", handleContentTypeClick);
@@ -715,11 +927,12 @@ loadTheme();
   }
 })();
 
+loadGenreMaps(); // prefetch genre maps for card tags + genre bar
+
 updateNavForContentType();
 setActiveCategoryButton(state.currentCategory);
 updateHeader();
 if (container) {
-  // Load genre bar for initial content type (movies by default)
   if (state.currentContentType === "movies" || state.currentContentType === "tv") {
     loadGenreBar(state.currentContentType);
   }

@@ -1373,3 +1373,95 @@ html[data-theme="light"] .dynamic-bg {
 .suggestions-section .suggestions-empty p { margin: .5rem 0; }
 .suggestions-group { margin-bottom: 2rem; }
 .suggestions-group h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; color: var(--fg-muted); }
+
+/* ===== Search Autocomplete Dropdown ===== */
+.search-wrapper { position: relative; }
+.search-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: .9rem; box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  z-index: 9999; overflow: hidden; display: none;
+}
+.search-dropdown.open { display: block; }
+.search-spell-hint {
+  padding: .55rem .85rem; font-size: .78rem; color: var(--fg-muted);
+  border-bottom: 1px solid var(--border); background: var(--accent-soft);
+}
+.search-spell-hint strong { color: var(--accent); cursor: pointer; font-weight: 700; }
+.search-dropdown-item {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .85rem; cursor: pointer; text-decoration: none;
+  color: var(--fg); transition: background .12s; border-bottom: 1px solid var(--border);
+}
+.search-dropdown-item:last-child { border-bottom: none; }
+.search-dropdown-item:hover { background: var(--accent-soft); }
+.search-dropdown-thumb {
+  width: 34px; height: 50px; object-fit: cover; border-radius: .35rem;
+  flex-shrink: 0; background: var(--bg);
+}
+.search-dropdown-info { flex: 1; min-width: 0; }
+.search-dropdown-title {
+  font-size: .83rem; font-weight: 700;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.search-dropdown-sub { font-size: .7rem; color: var(--fg-muted); margin-top: .1rem; }
+.search-dropdown-badge {
+  font-size: .6rem; font-weight: 700; padding: .1rem .45rem;
+  border-radius: 999px; flex-shrink: 0; text-transform: uppercase; letter-spacing: .04em;
+}
+.sdb--movie  { background: rgba(124,58,237,.18); color: #a78bfa; }
+.sdb--tv     { background: rgba(16,185,129,.18);  color: #6ee7b7; }
+.sdb--anime  { background: rgba(239,68,68,.18);   color: #fca5a5; }
+
+/* ===== Genre tags on browse cards ===== */
+.card-genres { display: flex; flex-wrap: wrap; gap: .3rem; padding: .35rem .5rem .1rem; }
+.card-genre-tag {
+  font-size: .6rem; font-weight: 700; padding: .15rem .42rem; border-radius: 999px;
+  background: rgba(124,58,237,.14); color: var(--accent);
+  border: 1px solid rgba(124,58,237,.28); cursor: pointer;
+  text-transform: uppercase; letter-spacing: .03em; transition: background .15s;
+  white-space: nowrap; line-height: 1.4;
+}
+.card-genre-tag:hover { background: rgba(124,58,237,.32); }
+
+/* ===== For You full page ===== */
+.foryou-page { padding: .5rem 0 3rem; }
+.foryou-hero { padding: 1.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+.foryou-hero h2 { font-size: 1.7rem; font-weight: 800; margin: 0 0 .45rem; }
+.foryou-hero p { color: var(--fg-muted); margin: 0; font-size: .95rem; }
+.foryou-section { margin-bottom: 2.5rem; }
+.foryou-section-header { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .9rem; flex-wrap: wrap; }
+.foryou-section-header h2 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.foryou-section-header .foryou-count { font-size: .78rem; color: var(--fg-muted); }
+.foryou-section-header a { font-size: .78rem; color: var(--accent); margin-left: auto; text-decoration: none; }
+.foryou-grid {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+@media (max-width: 480px) {
+  .foryou-grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: .6rem; }
+}
+.foryou-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: .85rem;
+  overflow: hidden; text-decoration: none; color: var(--fg);
+  transition: transform .15s, box-shadow .15s; display: block;
+}
+.foryou-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,.45); }
+.foryou-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
+.foryou-card-info { padding: .45rem .5rem .5rem; }
+.foryou-card-title {
+  font-size: .75rem; font-weight: 700; margin: 0 0 .25rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.foryou-card-meta { font-size: .65rem; color: var(--fg-muted); display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.foryou-type-badge {
+  font-size: .55rem; font-weight: 700; padding: .1rem .35rem; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.foryou-type-badge.movie  { background: rgba(124,58,237,.2); color: #a78bfa; }
+.foryou-type-badge.tv     { background: rgba(16,185,129,.2);  color: #6ee7b7; }
+.foryou-type-badge.anime  { background: rgba(239,68,68,.2);   color: #fca5a5; }
+.foryou-empty { text-align: center; padding: 4rem 1rem; color: var(--fg-muted); }
+.foryou-empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+.foryou-empty h3 { margin: 0 0 .5rem; font-size: 1.15rem; color: var(--fg); }
+.foryou-empty p { margin: 0 0 1.25rem; }

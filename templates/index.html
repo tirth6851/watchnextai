@@ -38,15 +38,16 @@
 
     <!-- Search gets its own slot so it can go full-width on mobile -->
     <div class="nav-search">
-      <div class="search">
+      <div class="search search-wrapper">
         <input
           id="searchInput"
           type="search"
-          placeholder="Search…"
+          placeholder="Search movies, shows, anime…"
           aria-label="Search"
           autocomplete="off"
         />
         <button id="searchBtn" class="icon-btn" type="button">Search</button>
+        <div id="searchDropdown" class="search-dropdown" role="listbox"></div>
       </div>
     </div>
 
