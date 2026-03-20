@@ -1334,3 +1334,42 @@ html[data-theme="light"] .dynamic-bg {
   background: rgba(239, 68, 68, 0.82);
   color: #fff;
 }
+
+/* ===== Cast Section ===== */
+.cast-section { margin-top: 2rem; }
+.cast-section h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.cast-grid { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: .5rem; scrollbar-width: thin; }
+.cast-card { flex: 0 0 90px; text-align: center; }
+.cast-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); background: var(--card); display: block; margin: 0 auto .5rem; }
+.cast-name { font-size: .72rem; font-weight: 700; color: var(--fg); margin: 0 0 .2rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cast-character { font-size: .68rem; color: var(--fg-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+
+/* ===== More Like This Section ===== */
+.more-like-section { margin-top: 2rem; }
+.more-like-section h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.more-like-grid { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: .5rem; scrollbar-width: thin; }
+.more-like-card { flex: 0 0 130px; text-decoration: none; color: var(--fg); background: var(--card); border: 1px solid var(--border); border-radius: .75rem; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.more-like-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.more-like-card img { width: 100%; height: 190px; object-fit: cover; display: block; }
+.more-like-card-title { padding: .4rem .5rem; font-size: .72rem; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ===== Star Rating Widget ===== */
+.star-rating-widget { display: none; align-items: center; gap: .5rem; padding: .5rem 0; flex-wrap: wrap; }
+.star-rating-widget.visible { display: flex; }
+.star-rating-widget > span { font-size: .85rem; font-weight: 600; color: var(--fg-muted); }
+.star-rating-widget .stars { display: flex; gap: .2rem; }
+.star-btn { font-size: 1.6rem; cursor: pointer; color: var(--border); transition: color .1s, transform .1s; background: none; border: none; padding: 0; line-height: 1; }
+.star-btn:hover, .star-btn.hovered { color: #f59e0b; transform: scale(1.15); }
+
+/* ===== Genre Filter Bar ===== */
+.genre-bar { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0 .5rem; }
+.genre-chip { padding: .3rem .8rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--fg); font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap; }
+.genre-chip:hover { background: var(--accent-soft); border-color: var(--accent); }
+.genre-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* ===== For You / Suggestions Tab ===== */
+.suggestions-section { padding: 1rem 0; }
+.suggestions-section .suggestions-empty { text-align: center; padding: 3rem 1rem; color: var(--fg-muted); }
+.suggestions-section .suggestions-empty p { margin: .5rem 0; }
+.suggestions-group { margin-bottom: 2rem; }
+.suggestions-group h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; color: var(--fg-muted); }

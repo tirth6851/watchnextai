@@ -177,6 +177,9 @@
             const card = document.createElement('article');
             card.className = 'card profile-card';
             card.dataset.mediaId = item.media_id;
+            const starsHtml = item.rating
+                ? `<div style="font-size:.85rem;color:#f59e0b;letter-spacing:.05em;">${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}</div>`
+                : '';
             card.innerHTML = `
                 <a class="card-link" href="${_detailUrl(item)}">
                     <img class="poster" src="${_posterUrl(item)}" alt="${item.title || ''}" loading="lazy" />
@@ -186,6 +189,7 @@
                         ${_typeBadge(item.media_type)}
                         <h3 class="card-title" style="flex:1;min-width:0;">${item.title || 'Untitled'}</h3>
                     </div>
+                    ${starsHtml}
                     <button class="remove-btn" onclick="removeWatchedItem(${item.media_id}, this)" title="Remove">✕ Remove</button>
                 </div>`;
             return card;

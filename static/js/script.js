@@ -6,6 +6,7 @@ const state = {
   currentQuery: "",
   currentContentType: "movies",
   isGlobalSearch: false,
+  currentGenreId: null,
 };
 
 const container = document.getElementById("movie-container");
@@ -110,7 +111,7 @@ function updateNavForContentType() {
     } else if (type === "tv") {
       btn.style.display = tvNavCategories.includes(cat) ? "" : "none";
     } else {
-      // anime — hide all category nav
+      // anime / foryou — hide all category nav
       btn.style.display = "none";
     }
   });
@@ -276,6 +277,7 @@ async function fetchMovies(page) {
   const category = state.currentQuery ? "search" : state.currentCategory;
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
+  if (state.currentGenreId && !state.currentQuery) params.set("genre_id", String(state.currentGenreId));
 
   const response = await fetch(`/api/movies?${params.toString()}`);
   if (!response.ok) {
@@ -289,6 +291,7 @@ async function fetchTvShows(page) {
   const category = state.currentQuery ? "search" : state.currentCategory;
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
+  if (state.currentGenreId && !state.currentQuery) params.set("genre_id", String(state.currentGenreId));
 
   const response = await fetch(`/api/tv_shows?${params.toString()}`);
   if (!response.ok) {
@@ -443,12 +446,161 @@ function handleCategoryClick(event) {
   state.currentCategory = button.dataset.category;
   state.currentQuery = "";
   state.isGlobalSearch = false;
+  state.currentGenreId = null;
   if (searchInput) searchInput.value = "";
   localStorage.setItem("wn_category", state.currentCategory);
+
+  // Reset active genre chip
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.toggle("active", c.textContent === "All"));
 
   setActiveCategoryButton(state.currentCategory);
   updateHeader();
   resetAndLoad();
+}
+
+// Genre bar management
+async function loadGenreBar(type) {
+  const bar = document.getElementById("genreBar");
+  if (!bar) return;
+  if (type === "anime" || type === "foryou") {
+    bar.style.display = "none";
+    bar.innerHTML = "";
+    return;
+  }
+  try {
+    const res = await fetch(`/api/genres?type=${type === "movies" ? "movie" : "tv"}`);
+    const { genres = [] } = await res.json();
+    bar.innerHTML = "";
+    const allChip = document.createElement("button");
+    allChip.className = "genre-chip" + (state.currentGenreId === null ? " active" : "");
+    allChip.textContent = "All";
+    allChip.onclick = () => selectGenre(null);
+    bar.appendChild(allChip);
+    genres.forEach((g) => {
+      const chip = document.createElement("button");
+      chip.className = "genre-chip" + (state.currentGenreId === g.id ? " active" : "");
+      chip.textContent = g.name;
+      chip.onclick = () => selectGenre(g.id);
+      bar.appendChild(chip);
+    });
+    bar.style.display = "flex";
+  } catch {}
+}
+
+function selectGenre(genreId) {
+  state.currentGenreId = genreId;
+  document.querySelectorAll(".genre-chip").forEach((c) => {
+    c.classList.toggle("active", genreId === null ? c.textContent === "All" : c.textContent !== "All" && c.onclick.toString().includes(genreId));
+  });
+  // Re-mark active chip correctly
+  document.querySelectorAll(".genre-chip").forEach((c) => c.classList.remove("active"));
+  const bar = document.getElementById("genreBar");
+  if (bar) {
+    bar.querySelectorAll(".genre-chip").forEach((c) => {
+      if (genreId === null) { if (c.textContent === "All") c.classList.add("active"); }
+      else { if (c.textContent !== "All" && c.dataset.gid === String(genreId)) c.classList.add("active"); }
+    });
+  }
+  resetAndLoad();
+}
+
+// For You / Suggestions tab
+async function loadSuggestions() {
+  const section = document.getElementById("suggestionsSection");
+  const content = document.getElementById("suggestionsContent");
+  const mainGrid = document.getElementById("movie-container");
+  const loadingEl = document.getElementById("loading");
+  if (!section || !content) return;
+
+  mainGrid.style.display = "none";
+  if (loadingEl) { loadingEl.textContent = "Loading…"; loadingEl.style.display = "block"; }
+  section.style.display = "block";
+  content.innerHTML = "";
+
+  // Check auth
+  const session = await (typeof checkAuth === "function" ? checkAuth() : Promise.resolve(null));
+  if (!session) {
+    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🔒</p><p>Sign in to get personalised suggestions based on your watch history.</p><button class="pill-btn" onclick="openAuthModal()" style="background:var(--accent);color:white;border-color:var(--accent);margin-top:1rem;">Sign In</button></div>`;
+    if (loadingEl) loadingEl.style.display = "none";
+    return;
+  }
+
+  // Load user's watched history
+  let watchedItems = [];
+  try {
+    const wd = await getWatched();
+    watchedItems = wd.success ? (wd.data || []) : [];
+  } catch {}
+
+  if (!watchedItems.length) {
+    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🎬</p><p>No watch history yet.</p><p>Start watching movies, shows, and anime to get personalised suggestions!</p></div>`;
+    if (loadingEl) loadingEl.style.display = "none";
+    return;
+  }
+
+  // Pick up to 3 recent watched items to generate recommendations from
+  const recent = watchedItems.slice(-3).reverse();
+  let foundAny = false;
+
+  for (const item of recent) {
+    if (item.media_type === "anime") continue; // anime handled separately
+    try {
+      const res = await fetch(`/api/recommendations?media_type=${item.media_type}&media_id=${item.media_id}`);
+      if (!res.ok) continue;
+      const { results = [] } = await res.json();
+      if (!results.length) continue;
+      foundAny = true;
+
+      const group = document.createElement("div");
+      group.className = "suggestions-group";
+      group.innerHTML = `<h3>Because you watched <em>${item.title || "something"}</em></h3>`;
+      const row = document.createElement("div");
+      row.className = "more-like-grid";
+      results.slice(0, 12).forEach((r) => {
+        const a = document.createElement("a");
+        a.className = "more-like-card";
+        a.href = `/${item.media_type}/${r.id}`;
+        const title = r.title || r.name || "Untitled";
+        a.innerHTML = `<img src="${r.poster_path ? "https://image.tmdb.org/t/p/w342"+r.poster_path : "https://via.placeholder.com/130x190"}" alt="${title}" loading="lazy"><div class="more-like-card-title">${title}</div>`;
+        row.appendChild(a);
+      });
+      group.appendChild(row);
+      content.appendChild(group);
+    } catch {}
+  }
+
+  // Also try anime recommendations
+  const recentAnime = watchedItems.filter((i) => i.media_type === "anime").slice(-1);
+  for (const item of recentAnime) {
+    try {
+      const res = await fetch(`/api/anime/${item.media_id}/recommendations`);
+      if (!res.ok) continue;
+      const { results = [] } = await res.json();
+      if (!results.length) continue;
+      foundAny = true;
+
+      const group = document.createElement("div");
+      group.className = "suggestions-group";
+      group.innerHTML = `<h3>Because you watched <em>${item.title || "an anime"}</em></h3>`;
+      const row = document.createElement("div");
+      row.className = "more-like-grid";
+      results.forEach((r) => {
+        const a = document.createElement("a");
+        a.className = "more-like-card";
+        a.href = `/anime/${r.mal_id}`;
+        a.innerHTML = `<img src="${r.images?.jpg?.image_url || "https://via.placeholder.com/130x190"}" alt="${r.title||""}" loading="lazy"><div class="more-like-card-title">${r.title||"Untitled"}</div>`;
+        row.appendChild(a);
+      });
+      group.appendChild(row);
+      content.appendChild(group);
+    } catch {}
+  }
+
+  if (!foundAny) {
+    content.innerHTML = `<div class="suggestions-empty"><p style="font-size:2rem;">🤔</p><p>We couldn't find suggestions yet. Try watching a few more titles!</p></div>`;
+  }
+
+  if (loadingEl) loadingEl.style.display = "none";
 }
 
 // Content-type tab handler
@@ -462,6 +614,7 @@ function handleContentTypeClick(event) {
   state.currentContentType = type;
   state.currentQuery = "";
   state.isGlobalSearch = false;
+  state.currentGenreId = null;
   if (searchInput) searchInput.value = "";
 
   // Set a default category for the new type
@@ -476,10 +629,26 @@ function handleContentTypeClick(event) {
     btn.classList.toggle("active", btn.dataset.type === type);
   });
 
-  updateNavForContentType();
-  setActiveCategoryButton(state.currentCategory);
-  updateHeader();
-  resetAndLoad();
+  const suggestionsSection = document.getElementById("suggestionsSection");
+  const mainGrid = document.getElementById("movie-container");
+
+  if (type === "foryou") {
+    if (mainGrid) mainGrid.style.display = "none";
+    if (navLinks) navLinks.querySelectorAll(".nav-link").forEach((b) => (b.style.display = "none"));
+    const bar = document.getElementById("genreBar");
+    if (bar) bar.style.display = "none";
+    pageTitle.textContent = "✨ For You";
+    pageHint.textContent = "Personalised picks based on your watch history.";
+    loadSuggestions();
+  } else {
+    if (suggestionsSection) suggestionsSection.style.display = "none";
+    if (mainGrid) mainGrid.style.display = "";
+    updateNavForContentType();
+    setActiveCategoryButton(state.currentCategory);
+    updateHeader();
+    loadGenreBar(type);
+    resetAndLoad();
+  }
 }
 
 function throttle(fn, wait) {
@@ -550,6 +719,10 @@ updateNavForContentType();
 setActiveCategoryButton(state.currentCategory);
 updateHeader();
 if (container) {
+  // Load genre bar for initial content type (movies by default)
+  if (state.currentContentType === "movies" || state.currentContentType === "tv") {
+    loadGenreBar(state.currentContentType);
+  }
   resetAndLoad();
 }
 

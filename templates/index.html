@@ -22,6 +22,7 @@
       <button class="content-type-btn active" data-type="movies">🎬 Movies</button>
       <button class="content-type-btn" data-type="tv">📺 TV Shows</button>
       <button class="content-type-btn" data-type="anime">🎌 Anime</button>
+      <button class="content-type-btn" data-type="foryou">✨ For You</button>
     </div>
 
     <div class="nav-tabs" id="navLinks">
@@ -77,6 +78,8 @@
       </div>
     </header>
 
+    <div class="genre-bar" id="genreBar" style="display:none;"></div>
+
     <section class="grid" id="movie-container">
       {% for movie in movies %}
         <article class="card movie-card" data-title="{{ movie.title|default('')|lower }}">
@@ -98,6 +101,10 @@
         </article>
       {% endfor %}
     </section>
+
+    <div class="suggestions-section" id="suggestionsSection" style="display:none;">
+      <div id="suggestionsContent"></div>
+    </div>
 
     <div class="loader" id="loading" aria-live="polite">Loading…</div>
     <div class="toast" id="toast" role="status"></div>

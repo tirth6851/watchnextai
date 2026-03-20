@@ -87,6 +87,20 @@ def movie_detail(movie_id):
 def get_movies():
     category = request.args.get("category", "popular")
     page = request.args.get("page", 1, type=int)
+    genre_id = request.args.get("genre_id", "")
+
+    if genre_id and category != "search":
+        data, err = tmdb_get(
+            "/discover/movie",
+            page=page,
+            sort_by="popularity.desc",
+            include_adult="false",
+            include_video="false",
+            with_genres=genre_id,
+        )
+        if err:
+            return jsonify({"movies": [], "error": err}), 502
+        return jsonify({"movies": (data or {}).get("results", [])})
 
     if category == "search":
         query = request.args.get("query", "")
@@ -225,7 +239,20 @@ def tv_detail(tv_id):
 def get_tv_shows():
     category = request.args.get("category", "popular")
     page = request.args.get("page", 1, type=int)
-    
+    genre_id = request.args.get("genre_id", "")
+
+    if genre_id and category != "search":
+        data, err = tmdb_get(
+            "/discover/tv",
+            page=page,
+            sort_by="popularity.desc",
+            include_adult="false",
+            with_genres=genre_id,
+        )
+        if err:
+            return jsonify({"shows": [], "error": err}), 502
+        return jsonify({"shows": (data or {}).get("results", [])})
+
     if category == "search":
         query = request.args.get("query", "")
         if not query:
@@ -266,6 +293,28 @@ def get_tv_trailer(tv_id):
     if trailer:
         return jsonify({"key": trailer.get("key")})
     return jsonify({"key": None})
+
+@app.route("/api/movie/<int:movie_id>/credits")
+def get_movie_credits(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}/credits")
+    if err:
+        return jsonify({"error": err}), 502
+    cast = [
+        {"name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        for m in (data or {}).get("cast", [])[:8]
+    ]
+    return jsonify({"cast": cast})
+
+@app.route("/api/tv/<int:tv_id>/credits")
+def get_tv_credits(tv_id):
+    data, err = tmdb_get(f"/tv/{tv_id}/credits")
+    if err:
+        return jsonify({"error": err}), 502
+    cast = [
+        {"name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        for m in (data or {}).get("cast", [])[:8]
+    ]
+    return jsonify({"cast": cast})
 
 # Anime routes
 @app.route("/anime/<int:anime_id>")
@@ -317,6 +366,23 @@ def get_anime_details(anime_id):
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 502
 
+@app.route("/api/anime/<int:anime_id>/recommendations")
+def get_anime_recommendations(anime_id):
+    try:
+        response = requests.get(
+            f"{JIKAN_BASE_URL}/anime/{anime_id}/recommendations",
+            timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+        recs = [
+            {"mal_id": i["entry"]["mal_id"], "title": i["entry"]["title"], "images": i["entry"]["images"]}
+            for i in response.json().get("data", [])[:12]
+            if i.get("entry")
+        ]
+        return jsonify({"results": recs})
+    except requests.exceptions.RequestException as e:
+        return jsonify({"results": [], "error": str(e)}), 502
+
 
 @app.route("/api/recommendations")
 def get_recommendations():
@@ -346,6 +412,17 @@ def get_recommendations():
         return jsonify({"results": results})
 
     return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
+
+
+@app.route("/api/genres")
+def get_genres():
+    media_type = request.args.get("type", "movie")
+    if media_type not in ("movie", "tv"):
+        return jsonify({"genres": [], "error": "type must be movie or tv"}), 400
+    data, err = tmdb_get(f"/genre/{media_type}/list")
+    if err:
+        return jsonify({"genres": [], "error": err}), 502
+    return jsonify({"genres": (data or {}).get("genres", [])})
 
 
 @app.route("/api/search")
