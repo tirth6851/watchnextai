@@ -200,7 +200,7 @@
             btn.style.display = '';
             const session = await checkAuth();
             if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const r = await markAsWatched(animeId, 'anime', animeData?.title, rating || null);
+            const r = await markAsWatched(animeId, 'anime', animeData?.title, rating || null, animeData?.images?.jpg?.image_url);
             if (r.success) {
                 btn.classList.add('active');
                 btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';

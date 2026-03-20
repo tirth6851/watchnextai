@@ -131,12 +131,12 @@ async function getWatchlist() {
 }
 
 // Mark as watched
-async function markAsWatched(mediaId, mediaType, title, rating) {
+async function markAsWatched(mediaId, mediaType, title, rating, posterPath) {
     const session = await checkAuth();
     if (!session) {
         return { success: false, error: 'Not authenticated' };
     }
-    
+
     const { data, error } = await supabase
         .from('watched')
         .insert({
@@ -144,6 +144,7 @@ async function markAsWatched(mediaId, mediaType, title, rating) {
             media_id: mediaId,
             media_type: mediaType,
             title: title,
+            poster_path: posterPath || null,
             rating: rating
         });
     

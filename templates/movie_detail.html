@@ -205,7 +205,7 @@
             btn.style.display = '';
             const session = await checkAuth();
             if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const r = await markAsWatched(movieId, 'movie', movieData?.title, rating || null);
+            const r = await markAsWatched(movieId, 'movie', movieData?.title, rating || null, movieData?.poster_path);
             if (r.success) {
                 btn.classList.add('active');
                 btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';

@@ -24,9 +24,13 @@ CREATE TABLE IF NOT EXISTS watched (
     media_id    integer     NOT NULL,
     media_type  text        NOT NULL,   -- 'movie' | 'tv' | 'anime'
     title       text,
+    poster_path text,
     rating      integer,
     created_at  timestamptz DEFAULT now()
 );
+
+-- Add poster_path to watched if upgrading an existing database
+ALTER TABLE watched ADD COLUMN IF NOT EXISTS poster_path text;
 
 CREATE UNIQUE INDEX IF NOT EXISTS watched_user_media
     ON watched (user_id, media_id, media_type);
