@@ -575,6 +575,10 @@ def send_welcome_email():
 def profile():
     return render_template('profile.html')
 
+@app.route('/onboarding')
+def onboarding():
+    return render_template('onboarding.html')
+
 @app.route('/terms')
 def terms():
     return render_template('terms.html')

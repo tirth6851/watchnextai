@@ -56,6 +56,10 @@
                     <div class="stat-label">To Watch</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-number" id="watchingCount">–</div>
+                    <div class="stat-label">Watching</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-number" id="watchedCount">–</div>
                     <div class="stat-label">Watched</div>
                 </div>
@@ -64,6 +68,7 @@
             <!-- Tabs -->
             <div class="profile-tabs">
                 <button class="profile-tab active" id="tabWatchlist" onclick="switchTab('watchlist')">📋 Watchlist</button>
+                <button class="profile-tab" id="tabWatching" onclick="switchTab('watching')">▶ Watching</button>
                 <button class="profile-tab" id="tabWatched" onclick="switchTab('watched')">✓ Watched</button>
             </div>
 
@@ -72,6 +77,14 @@
                 <div class="grid" id="watchlistGrid"></div>
                 <p id="watchlistEmpty" style="display:none; text-align:center; color:var(--fg-muted); padding:2rem;">
                     Your watchlist is empty. Start adding movies, shows, and anime!
+                </p>
+            </section>
+
+            <!-- Watching grid -->
+            <section id="watchingSection" style="display:none;">
+                <div class="grid" id="watchingGrid"></div>
+                <p id="watchingEmpty" style="display:none; text-align:center; color:var(--fg-muted); padding:2rem;">
+                    Nothing in progress yet. Hit "Watching" on any TV show or anime!
                 </p>
             </section>
 
@@ -130,8 +143,10 @@
         function switchTab(tab) {
             _activeTab = tab;
             document.getElementById('tabWatchlist').classList.toggle('active', tab === 'watchlist');
+            document.getElementById('tabWatching').classList.toggle('active', tab === 'watching');
             document.getElementById('tabWatched').classList.toggle('active', tab === 'watched');
             document.getElementById('watchlistSection').style.display = tab === 'watchlist' ? 'block' : 'none';
+            document.getElementById('watchingSection').style.display  = tab === 'watching'  ? 'block' : 'none';
             document.getElementById('watchedSection').style.display   = tab === 'watched'   ? 'block' : 'none';
         }
 
@@ -173,6 +188,32 @@
             return card;
         }
 
+        function renderWatchingCard(item) {
+            const card = document.createElement('article');
+            card.className = 'card profile-card';
+            card.dataset.mediaId = item.media_id;
+            const progressLabel = item.media_type === 'anime'
+                ? `Ep ${item.current_episode}`
+                : `S${item.current_season}E${item.current_episode}`;
+            const ratingHtml = item.rating
+                ? `<div style="font-size:.82rem;color:#f59e0b;">${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}</div>`
+                : '';
+            card.innerHTML = `
+                <a class="card-link" href="${_detailUrl(item)}">
+                    <img class="poster" src="${_posterUrl(item)}" alt="${item.title || ''}" loading="lazy" />
+                    <div style="position:absolute;bottom:.4rem;left:.4rem;background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;">▶ ${progressLabel}</div>
+                </a>
+                <div class="card-meta">
+                    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                        ${_typeBadge(item.media_type)}
+                        <h3 class="card-title" style="flex:1;min-width:0;">${item.title || 'Untitled'}</h3>
+                    </div>
+                    ${ratingHtml}
+                    <button class="remove-btn" onclick="removeWatchingItem(${item.media_id}, this)" title="Remove">✕ Remove</button>
+                </div>`;
+            return card;
+        }
+
         function renderWatchedCard(item) {
             const card = document.createElement('article');
             card.className = 'card profile-card';
@@ -210,6 +251,27 @@
                     if (count === 0) document.getElementById('watchlistEmpty').style.display = 'block';
                 }, 300);
                 window.showToast('Removed from watchlist.');
+            } else {
+                btn.disabled = false;
+                window.showToast(r.error || 'Error removing item.', 'error');
+            }
+        }
+
+        async function removeWatchingItem(mediaId, btn) {
+            btn.disabled = true;
+            const r = await removeFromWatching(mediaId);
+            if (r.success) {
+                const card = btn.closest('.card');
+                card.style.transition = 'opacity .3s, transform .3s';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(.9)';
+                setTimeout(() => {
+                    card.remove();
+                    const count = parseInt(document.getElementById('watchingCount').textContent) - 1;
+                    document.getElementById('watchingCount').textContent = count;
+                    if (count === 0) document.getElementById('watchingEmpty').style.display = 'block';
+                }, 300);
+                window.showToast('Removed from watching.');
             } else {
                 btn.disabled = false;
                 window.showToast(r.error || 'Error removing item.', 'error');
@@ -263,6 +325,17 @@
                 document.getElementById('watchlistEmpty').style.display = 'block';
             } else {
                 watchlistItems.forEach(item => wlGrid.appendChild(renderWatchlistCard(item)));
+            }
+
+            // Load watching
+            const wn = await getWatching();
+            const watchingItems = wn.success ? (wn.data || []) : [];
+            document.getElementById('watchingCount').textContent = watchingItems.length;
+            const wnGrid = document.getElementById('watchingGrid');
+            if (watchingItems.length === 0) {
+                document.getElementById('watchingEmpty').style.display = 'block';
+            } else {
+                watchingItems.forEach(item => wnGrid.appendChild(renderWatchingCard(item)));
             }
 
             // Load watched
