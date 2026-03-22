@@ -97,6 +97,40 @@
             </section>
         </div>
 
+        <!-- Security / MFA Section -->
+        <div id="securitySection" style="display:none; margin-top:2rem;">
+            <h2 style="font-size:1.1rem;font-weight:700;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
+                🔐 Security
+            </h2>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:1rem;padding:1.25rem 1.5rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:600;margin-bottom:.2rem;">Two-Factor Authentication (2FA)</div>
+                        <div id="mfaStatus" style="font-size:.85rem;color:var(--fg-muted,#94a3b8);">Checking…</div>
+                    </div>
+                    <button id="mfaBtn" class="pill-btn" onclick="handleMfaToggle()"
+                        style="min-width:120px;text-align:center;">…</button>
+                </div>
+
+                <!-- QR code enrollment UI (hidden until enroll is clicked) -->
+                <div id="mfaEnrollBox" style="display:none;margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1.25rem;">
+                    <p style="font-size:.88rem;color:var(--fg-muted,#94a3b8);margin:0 0 .9rem;">
+                        Scan this QR code with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.
+                    </p>
+                    <img id="mfaQr" src="" alt="QR code" style="width:160px;height:160px;display:block;margin:0 auto .9rem;border-radius:.5rem;background:#fff;padding:6px;" />
+                    <p id="mfaSecret" style="font-size:.75rem;color:var(--fg-muted,#94a3b8);text-align:center;word-break:break-all;margin:0 0 .9rem;"></p>
+                    <div style="display:flex;gap:.6rem;max-width:320px;margin:0 auto;">
+                        <input type="text" id="mfaCodeInput" placeholder="000000" maxlength="6" inputmode="numeric"
+                            style="flex:1;padding:.55rem .75rem;border-radius:.6rem;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:1.1rem;letter-spacing:.3em;text-align:center;"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);" />
+                        <button class="pill-btn" onclick="confirmMfaEnroll()"
+                            style="background:var(--accent);color:#fff;border-color:var(--accent);">Activate</button>
+                    </div>
+                    <p id="mfaEnrollError" style="color:#ef4444;font-size:.82rem;margin:.6rem 0 0;text-align:center;"></p>
+                </div>
+            </div>
+        </div>
+
         <div class="toast" id="toast" role="status"></div>
     </main>
 
@@ -351,6 +385,68 @@
         }
 
         loadProfile();
+
+        // ── MFA / Security section ────────────────────────────────────────────
+        let _mfaEnrollId = ''; // factor ID during enrollment
+
+        async function loadMfaSecurity() {
+            document.getElementById('securitySection').style.display = 'block';
+            const factors = await mfaListFactors();
+            const active  = factors.totp?.filter(f => f.status === 'verified') || [];
+            if (active.length > 0) {
+                document.getElementById('mfaStatus').textContent = '✅ Enabled — your account is protected';
+                document.getElementById('mfaBtn').textContent    = 'Disable 2FA';
+                document.getElementById('mfaBtn').style.cssText += ';border-color:#ef4444;color:#ef4444;';
+                document.getElementById('mfaBtn').dataset.factorId = active[0].id;
+            } else {
+                document.getElementById('mfaStatus').textContent = 'Not enabled — add extra login protection';
+                document.getElementById('mfaBtn').textContent    = 'Enable 2FA';
+            }
+        }
+
+        async function handleMfaToggle() {
+            const btn     = document.getElementById('mfaBtn');
+            const factorId = btn.dataset.factorId;
+            if (factorId) {
+                // Disable
+                if (!confirm('Disable two-factor authentication? Your account will be less secure.')) return;
+                btn.disabled = true;
+                const r = await mfaUnenroll(factorId);
+                btn.disabled = false;
+                if (!r.success) { window.showToast(r.error || 'Failed to disable 2FA.', 'error'); return; }
+                window.showToast('2FA disabled.');
+                await loadMfaSecurity();
+            } else {
+                // Enable — start enrollment
+                btn.disabled = true;
+                const r = await mfaEnroll();
+                btn.disabled = false;
+                if (!r.success) { window.showToast(r.error || 'Failed to start 2FA setup.', 'error'); return; }
+                _mfaEnrollId = r.id;
+                document.getElementById('mfaQr').src   = r.qrCode;
+                document.getElementById('mfaSecret').textContent = 'Manual key: ' + r.secret;
+                document.getElementById('mfaEnrollBox').style.display = 'block';
+                document.getElementById('mfaCodeInput').focus();
+            }
+        }
+
+        async function confirmMfaEnroll() {
+            const code = document.getElementById('mfaCodeInput').value.trim();
+            const errEl = document.getElementById('mfaEnrollError');
+            errEl.textContent = '';
+            if (code.length !== 6) { errEl.textContent = 'Please enter the 6-digit code.'; return; }
+            // Challenge then verify to activate the factor
+            const ch = await mfaChallenge(_mfaEnrollId);
+            if (!ch.success) { errEl.textContent = ch.error; return; }
+            const v = await mfaVerify(_mfaEnrollId, ch.challengeId, code);
+            if (!v.success) { errEl.textContent = v.error || 'Invalid code. Try again.'; return; }
+            document.getElementById('mfaEnrollBox').style.display = 'none';
+            window.showToast('2FA enabled! Your account is now more secure. 🔐');
+            await loadMfaSecurity();
+        }
+
+        // Load MFA status after profile loads
+        checkAuth().then(session => { if (session) loadMfaSecurity(); });
     </script>
 </body>
 </html>
