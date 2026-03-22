@@ -32,12 +32,13 @@
         .ob-stage {
             position: relative;
             width: min(320px, 88vw);
-            height: 460px;
+            height: 420px;
             margin: 0 auto;
+            overflow: hidden;
         }
         .ob-card {
             position: absolute; inset: 0;
-            background: var(--card); border: 1px solid var(--border);
+            background: var(--bg); border: 1px solid var(--border);
             border-radius: 1.4rem; overflow: hidden;
             transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
             will-change: transform;
@@ -45,21 +46,27 @@
         }
         .ob-card.exit-left  { transform: translateX(-120%) rotate(-15deg); opacity: 0; pointer-events: none; }
         .ob-card.exit-right { transform: translateX(120%)  rotate(15deg);  opacity: 0; pointer-events: none; }
-        .ob-card.stack-1 { transform: scale(.95) translateY(12px); z-index: 1; }
-        .ob-card.stack-2 { transform: scale(.9)  translateY(24px); z-index: 0; }
+        .ob-card.stack-1 { transform: scale(.95) translateY(-10px); z-index: 1; }
+        .ob-card.stack-2 { transform: scale(.90) translateY(-20px); z-index: 0; }
         .ob-card.active   { z-index: 10; transform: none; }
+        .ob-card.stack-1 .ob-card-info,
+        .ob-card.stack-2 .ob-card-info { visibility: hidden; }
         .ob-card img {
             width: 100%; height: 300px; object-fit: cover; display: block;
         }
         .ob-card-info {
             padding: .9rem 1rem .6rem;
+            background: rgba(11, 15, 24, 0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .ob-card-title {
-            font-size: 1.1rem; font-weight: 700; margin: 0 0 .25rem;
+            font-size: 1.05rem; font-weight: 700; margin: 0 0 .25rem;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            color: #fff;
         }
         .ob-card-meta {
-            font-size: .78rem; color: var(--fg-muted, #94a3b8);
+            font-size: .78rem; color: rgba(255,255,255,.6);
         }
 
         /* Action buttons */
@@ -96,6 +103,24 @@
             transition: all .15s;
         }
         .ob-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        /* Auth loading / gate overlays */
+        .ob-overlay {
+            position: fixed; inset: 0; z-index: 999;
+            background: var(--bg, #0b0f18);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 2rem; text-align: center;
+        }
+        .ob-overlay h2 { font-size: 1.6rem; margin: 0 0 .65rem; }
+        .ob-overlay p  { color: var(--fg-muted, #94a3b8); max-width: 360px; line-height: 1.55; margin: 0 0 1.5rem; }
+        .ob-spinner {
+            width: 40px; height: 40px; border: 3px solid var(--border);
+            border-top-color: var(--accent, #6366f1); border-radius: 50%;
+            animation: ob-spin .8s linear infinite; margin-bottom: 1.25rem;
+        }
+        @keyframes ob-spin { to { transform: rotate(360deg); } }
+        @keyframes ob-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
         /* Done state */
         .ob-done {
@@ -185,6 +210,20 @@
         </div>
     </main>
 
+    <!-- Auth loading overlay (shown while checking session / waiting for email confirm) -->
+    <div class="ob-overlay" id="obAuthLoading">
+        <div class="ob-spinner"></div>
+        <p id="obAuthLoadingText" style="color:var(--fg-muted,#94a3b8);font-size:.95rem;margin:0;">Checking your account…</p>
+    </div>
+
+    <!-- Auth gate (shown when not signed in and no token in URL) -->
+    <div class="ob-overlay" id="obAuthGate" style="display:none;">
+        <div style="font-size:3.5rem;margin-bottom:1.25rem;">🔒</div>
+        <h2>Sign up to continue</h2>
+        <p>Create a free account first so we can save your picks and personalise your feed.</p>
+        <a href="/" class="ob-done-btn">Go to Sign Up →</a>
+    </div>
+
     <div class="toast" id="toast" role="status"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.3/dist/umd/supabase.min.js"></script>
@@ -192,15 +231,16 @@
     <script>
         // ── State ────────────────────────────────────────────────────────────
         const GOAL = 20;
-        let _rated   = 0;
-        let _category = 'movies';
-        let _queue    = [];       // items not yet shown
-        let _cursor   = 0;
-        let _current  = null;    // item on top card
-        let _next1    = null;
-        let _next2    = null;
-        let _loading  = false;
-        let _dragStartX = 0;
+        let _rated        = 0;
+        let _category     = 'movies';
+        let _queue        = [];
+        let _cursor       = 0;
+        let _current      = null;
+        let _loading      = false;
+        let _dragStartX   = 0;
+        let _skipStreak   = 0;       // consecutive skips
+        let _lastRated    = null;    // last item the user rated (for skip-streak recs)
+        let _fetchingRecs = false;
 
         // ── Toast ─────────────────────────────────────────────────────────────
         window.showToast = function(msg, type) {
@@ -212,32 +252,44 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         };
 
+        // ── Auth overlay helpers ──────────────────────────────────────────────
+        function _setLoadingText(txt) {
+            document.getElementById('obAuthLoadingText').textContent = txt;
+        }
+        function _hideLoading() {
+            document.getElementById('obAuthLoading').style.display = 'none';
+        }
+        function _showGate() {
+            document.getElementById('obAuthLoading').style.display = 'none';
+            document.getElementById('obAuthGate').style.display    = 'flex';
+        }
+
         // ── Category switch ──────────────────────────────────────────────────
         function switchCategory(cat) {
             _category = cat;
             document.querySelectorAll('.ob-tab').forEach(b => b.classList.remove('active'));
             event.currentTarget.classList.add('active');
-            _queue = []; _cursor = 0; _current = null; _next1 = null; _next2 = null;
+            _queue = []; _cursor = 0; _current = null;
             loadMore().then(fillCards);
         }
 
-        // ── Fetch content ────────────────────────────────────────────────────
+        // ── Fetch trending content ────────────────────────────────────────────
         async function loadMore() {
             if (_loading) return;
             _loading = true;
             try {
                 let url;
-                if      (_category === 'movies') url = '/api/movies?category=trending&page=' + (Math.floor(_cursor / 20) + 1);
+                if      (_category === 'movies') url = '/api/movies?category=trending&page='   + (Math.floor(_cursor / 20) + 1);
                 else if (_category === 'tv')      url = '/api/tv_shows?category=trending&page=' + (Math.floor(_cursor / 20) + 1);
-                else                              url = '/api/anime?category=top&page='  + (Math.floor(_cursor / 20) + 1);
+                else                              url = '/api/anime?category=top&page='         + (Math.floor(_cursor / 20) + 1);
 
                 const res  = await fetch(url);
                 const data = await res.json();
                 const items = data.movies || data.shows || data.anime || [];
-
+                const seen  = new Set(_queue.map(_itemId));
                 items.forEach(item => {
                     item._cat = _category;
-                    _queue.push(item);
+                    if (!seen.has(_itemId(item))) _queue.push(item);
                 });
             } catch(e) {
                 console.error('onboarding fetch error', e);
@@ -246,29 +298,57 @@
             }
         }
 
-        // ── Build card data ──────────────────────────────────────────────────
+        // ── Fetch recommendations for an item and inject into queue ───────────
+        async function _injectRecommendations(item, insertAt) {
+            if (_fetchingRecs) return;
+            _fetchingRecs = true;
+            try {
+                const id  = _itemId(item);
+                const cat = item._cat;
+                let recs  = [];
+
+                if (cat === 'anime') {
+                    const res  = await fetch(`/api/anime/${id}/recommendations`);
+                    const data = await res.json();
+                    recs = (data.data || []).slice(0, 10).map(r => ({ ...r.entry, _cat: 'anime' }));
+                } else {
+                    const type = cat === 'movies' ? 'movie' : 'tv';
+                    const res  = await fetch(`/api/recommendations?media_type=${type}&media_id=${id}`);
+                    const data = await res.json();
+                    recs = (data.results || []).slice(0, 10).map(r => ({ ...r, _cat: cat }));
+                }
+
+                if (recs.length === 0) return;
+                const seen    = new Set(_queue.map(_itemId));
+                const fresh   = recs.filter(r => !seen.has(_itemId(r)));
+                const at      = Math.min(insertAt, _queue.length);
+                _queue.splice(at, 0, ...fresh);
+            } catch(e) {
+                console.warn('rec fetch error', e);
+            } finally {
+                _fetchingRecs = false;
+            }
+        }
+
+        // ── Card helpers ──────────────────────────────────────────────────────
         function _itemPoster(item) {
             if (item._cat === 'anime') {
                 return item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '';
             }
             return item.poster_path ? 'https://image.tmdb.org/t/p/w500' + item.poster_path : '';
         }
-        function _itemTitle(item) {
-            return item.title || item.name || 'Untitled';
-        }
+        function _itemTitle(item) { return item.title || item.name || 'Untitled'; }
         function _itemMeta(item) {
             if (item._cat === 'anime') {
                 const year = item.aired?.from?.slice(0, 4) || '';
                 const eps  = item.episodes ? `${item.episodes} eps` : '';
                 return [year, eps].filter(Boolean).join(' · ');
             }
-            const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+            const year   = (item.release_date || item.first_air_date || '').slice(0, 4);
             const rating = item.vote_average ? `⭐ ${item.vote_average.toFixed(1)}` : '';
             return [year, rating].filter(Boolean).join(' · ');
         }
-        function _itemId(item) {
-            return item.mal_id || item.id;
-        }
+        function _itemId(item)   { return item.mal_id || item.id; }
         function _itemType(item) { return item._cat === 'movies' ? 'movie' : item._cat; }
 
         function _fillCard(elId, item) {
@@ -282,18 +362,14 @@
         }
 
         function fillCards() {
-            if (_queue.length < 3 && !_loading) loadMore();
+            if (_queue.length < 5 && !_loading) loadMore();
             _current = _queue[0] || null;
-            _next1   = _queue[1] || null;
-            _next2   = _queue[2] || null;
             _fillCard('obCard0', _current);
-            _fillCard('obCard1', _next1);
-            _fillCard('obCard2', _next2);
+            _fillCard('obCard1', _queue[1] || null);
+            _fillCard('obCard2', _queue[2] || null);
 
-            // Reset card states
             ['obCard0','obCard1','obCard2'].forEach(id => {
-                const c = document.getElementById(id);
-                c.classList.remove('exit-left','exit-right');
+                document.getElementById(id).classList.remove('exit-left','exit-right');
             });
             document.getElementById('obCard0').className = 'ob-card active';
             document.getElementById('obCard1').className = 'ob-card stack-1';
@@ -308,20 +384,25 @@
             const item = _current;
             _queue.shift();
 
-            // Animate card out
+            // Animate top card out
             const top = document.getElementById('obCard0');
             top.classList.add(action === 'skip' ? 'exit-left' : 'exit-right');
+            setTimeout(fillCards, 340);
 
-            // Rotate DOM cards visually
-            setTimeout(() => {
-                _queue.unshift(); // already shifted
-                fillCards();
-            }, 340);
-
-            // Update progress
-            if (action !== 'skip') {
+            if (action === 'skip') {
+                _skipStreak++;
+                // After 3 consecutive skips, inject recs from the last rated item at the front
+                if (_skipStreak >= 3 && _lastRated) {
+                    _skipStreak = 0;
+                    _injectRecommendations(_lastRated, 0);
+                }
+            } else {
+                _skipStreak   = 0;
+                _lastRated    = item;
                 _rated++;
                 updateProgress();
+                // Inject recommendations after the current 2 queued cards (position 2)
+                _injectRecommendations(item, 2);
             }
 
             // Persist to Supabase (best-effort)
@@ -357,25 +438,49 @@
             document.getElementById('obDone').style.display      = 'block';
         }
 
-        function finishOnboarding() {
-            window.location.href = '/';
-        }
+        function finishOnboarding() { window.location.href = '/'; }
 
         // ── Swipe support ─────────────────────────────────────────────────────
         function _setupSwipe() {
             const stage = document.getElementById('obStage');
             stage.addEventListener('pointerdown', e => { _dragStartX = e.clientX; });
-            stage.addEventListener('pointerup', e => {
+            stage.addEventListener('pointerup',   e => {
                 const dx = e.clientX - _dragStartX;
                 if (Math.abs(dx) > 60) rateItem(dx > 0 ? 'watchlist' : 'skip');
             });
         }
 
-        // ── Init ──────────────────────────────────────────────────────────────
+        function _startOnboarding() {
+            _hideLoading();
+            loadMore().then(() => { fillCards(); _setupSwipe(); });
+        }
+
+        // ── Init: auth guard then start ───────────────────────────────────────
         (async function init() {
-            await loadMore();
-            fillCards();
-            _setupSwipe();
+            // 1. Already signed in?
+            const session = await checkAuth();
+            if (session) { _startOnboarding(); return; }
+
+            // 2. Email confirmation link lands here (#access_token in hash)
+            if (window.location.hash.includes('access_token')) {
+                _setLoadingText('Confirming your email…');
+                let handled = false;
+                if (supabase) {
+                    supabase.auth.onAuthStateChange((event, sess) => {
+                        if (event === 'SIGNED_IN' && sess && !handled) {
+                            handled = true;
+                            _setLoadingText('Email confirmed! Setting up your taste…');
+                            setTimeout(_startOnboarding, 1200);
+                        }
+                    });
+                }
+                // Fallback: if Supabase never fires within 12s, show gate
+                setTimeout(() => { if (!handled) _showGate(); }, 12000);
+                return;
+            }
+
+            // 3. Not signed in, no token — block access
+            _showGate();
         })();
     </script>
 </body>
