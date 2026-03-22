@@ -63,6 +63,71 @@ async function signIn(email, password) {
     return { success: true, user: data.user };
 }
 
+// Sign in with Google (OAuth)
+async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true }; // browser will redirect — this rarely returns
+}
+
+// Send password-reset email
+async function forgotPassword(email) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
+// Set a new password (called after PASSWORD_RECOVERY event or OTP recovery)
+async function updatePassword(newPassword) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
+// Verify a 6-digit OTP (type: 'signup' | 'recovery' | 'email')
+async function verifyOtp(email, token, type) {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type });
+    if (error) return { success: false, error: error.message };
+    return { success: true, session: data.session };
+}
+
+// ── MFA (TOTP) ────────────────────────────────────────────────────────────────
+
+async function mfaEnroll() {
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) return { success: false, error: error.message };
+    return { success: true, id: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
+}
+
+async function mfaChallenge(factorId) {
+    const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+    if (error) return { success: false, error: error.message };
+    return { success: true, challengeId: data.id };
+}
+
+async function mfaVerify(factorId, challengeId, code) {
+    const { error } = await supabase.auth.mfa.verify({ factorId, challengeId, code });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
+async function mfaListFactors() {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) return { success: false, totp: [] };
+    return { success: true, totp: data.totp || [] };
+}
+
+async function mfaUnenroll(factorId) {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
 // Sign out user
 async function signOut() {
     const { error } = await supabase.auth.signOut();
