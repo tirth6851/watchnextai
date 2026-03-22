@@ -63,6 +63,16 @@ async function signIn(email, password) {
     return { success: true, user: data.user };
 }
 
+// Sign in with Google (OAuth)
+async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true }; // browser will redirect — this rarely returns
+}
+
 // Send password-reset email
 async function forgotPassword(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

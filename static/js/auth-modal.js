@@ -54,8 +54,59 @@ document.addEventListener('keydown', function (e) {
   }
 });
 
+// ─── Google sign-in handler ───────────────────────────────────────────────────
+async function handleGoogleSignIn() {
+  const btn   = document.getElementById('authGoogleBtn');
+  const errEl = document.getElementById('authError');
+  if (errEl) errEl.textContent = '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
+  const result = await signInWithGoogle();
+  // On error (e.g. provider not enabled) restore the button
+  if (!result.success) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = _googleBtnHTML;
+    }
+    if (errEl) errEl.textContent = result.error || 'Google sign-in failed. Please try again.';
+  }
+  // On success the browser navigates away — nothing more to do here
+}
+
+const _googleBtnHTML = `
+  <svg width="18" height="18" viewBox="0 0 18 18" style="flex-shrink:0;" aria-hidden="true">
+    <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6A7.8 7.8 0 0 0 17 9.17c0-.57-.05-1.1-.49-1.17z"/>
+    <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+    <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18z"/>
+    <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/>
+  </svg>
+  Continue with Google`;
+
 // ─── Inject extra fields not in the HTML ─────────────────────────────────────
 function _ensureExtraFields() {
+  // Google sign-in button + divider
+  if (!document.getElementById('authGoogleSection')) {
+    const section = document.createElement('div');
+    section.id = 'authGoogleSection';
+    section.innerHTML = `
+      <button id="authGoogleBtn" type="button" onclick="handleGoogleSignIn()"
+        style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;
+               padding:.65rem 1rem;border-radius:.7rem;border:1.5px solid var(--border);
+               background:var(--card);color:var(--fg);font-size:.95rem;font-weight:600;
+               cursor:pointer;transition:background .15s,box-shadow .15s;margin-bottom:.85rem;"
+        onmouseover="this.style.background='var(--bg)';this.style.boxShadow='0 2px 8px rgba(0,0,0,.2)'"
+        onmouseout="this.style.background='var(--card)';this.style.boxShadow='none'">
+        ${_googleBtnHTML}
+      </button>
+      <div id="authDivider"
+        style="display:flex;align-items:center;gap:.75rem;margin-bottom:.85rem;color:var(--fg-muted,#94a3b8);font-size:.8rem;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span>or continue with email</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>`;
+    const title = document.getElementById('authModalTitle');
+    if (title) title.insertAdjacentElement('afterend', section);
+  }
+
   // OTP code input
   if (!document.getElementById('authOtpField')) {
     const field = document.createElement('div');
@@ -99,6 +150,10 @@ function _applyAuthMode(mode) {
   const emailWrap = el('authEmail')?.closest('.modal-field');
   const showPw    = v => { if (pwWrap)    pwWrap.style.display    = v ? '' : 'none'; };
   const showEmail = v => { if (emailWrap) emailWrap.style.display = v ? '' : 'none'; };
+
+  // Google section visible only on signin/signup
+  const gs = el('authGoogleSection');
+  if (gs) gs.style.display = (mode === 'signin' || mode === 'signup') ? '' : 'none';
 
   text('authError', '');
 
@@ -236,12 +291,23 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('authPassword')?.addEventListener('input', function () {
     if (_authMode === 'signup' || _authMode === 'set-password') _updateStrength(this.value);
   });
-  // PASSWORD_RECOVERY event (from clicking a reset link in email)
+  // Handle Supabase auth state changes (OAuth redirect, password recovery)
   if (typeof supabase !== 'undefined' && supabase) {
-    supabase.auth.onAuthStateChange((event) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         _ensureExtraFields();
         openAuthModal('set-password');
+      }
+      // OAuth redirect (e.g. Google) — close modal if open, refresh UI
+      if (event === 'SIGNED_IN' && session) {
+        closeAuthModal();
+        updateAuthUI();
+        // If this is a brand-new OAuth user (no onboarding yet), redirect
+        const isNew = !session.user?.user_metadata?.onboarded;
+        if (isNew && window.location.pathname !== '/onboarding') {
+          // Give updateAuthUI a moment then go to onboarding
+          setTimeout(() => { window.location.href = '/onboarding'; }, 300);
+        }
       }
     });
   }
