@@ -194,9 +194,6 @@ async function handleAuthSubmit() {
       : await signIn(email, password);
 
     if (result.success) {
-      closeAuthModal();
-      updateAuthUI();
-
       if (_authIsSignUp) {
         // Send welcome email (best-effort, failure is silent)
         fetch('/api/send-welcome-email', {
@@ -204,9 +201,20 @@ async function handleAuthSubmit() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         }).catch(() => {});
-        // Redirect new users to onboarding so they can build their library fast
-        window.location.href = '/onboarding';
+
+        if (result.session) {
+          // Email confirmation is OFF — user is immediately signed in
+          closeAuthModal();
+          updateAuthUI();
+          window.location.href = '/onboarding';
+        } else {
+          // Email confirmation is ON — show check-your-email screen
+          closeAuthModal();
+          _showCheckEmailOverlay(email);
+        }
       } else {
+        closeAuthModal();
+        updateAuthUI();
         showSuccessPopup('Signed in successfully! 👋', '✅');
       }
     } else {
@@ -297,6 +305,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+// ─── Check-your-email full-page overlay (shown after successful sign-up) ──────
+function _showCheckEmailOverlay(email) {
+  let overlay = document.getElementById('_checkEmailOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = '_checkEmailOverlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:9999',
+    'background:var(--bg,#0b0f18)',
+    'display:flex;flex-direction:column;align-items:center;justify-content:center',
+    'padding:2rem;text-align:center;animation:_cefadeIn .3s ease'
+  ].join(';');
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes _cefadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+      @keyframes _cepulse{0%,100%{opacity:1}50%{opacity:.3}}
+    </style>
+    <div style="font-size:4rem;margin-bottom:1.25rem;">📧</div>
+    <h2 style="font-size:1.75rem;margin:0 0 .65rem;color:var(--fg,#f1f5f9);">Check your inbox</h2>
+    <p style="color:var(--fg-muted,#94a3b8);margin:0 0 .4rem;font-size:1rem;max-width:380px;line-height:1.55;">
+      We sent a confirmation link to<br>
+      <strong style="color:var(--fg,#f1f5f9);">${email}</strong>
+    </p>
+    <p style="color:var(--fg-muted,#94a3b8);font-size:.88rem;margin:.9rem 0 2rem;max-width:340px;line-height:1.5;">
+      Click the link to verify your account. You'll be taken straight into your personalised taste setup.
+    </p>
+    <div style="display:flex;align-items:center;gap:.55rem;color:var(--fg-muted,#94a3b8);font-size:.82rem;">
+      <span style="width:9px;height:9px;background:var(--accent,#6366f1);border-radius:50%;display:inline-block;animation:_cepulse 1.5s infinite;"></span>
+      Waiting for confirmation…
+    </div>
+    <button onclick="document.getElementById('_checkEmailOverlay').remove();openAuthModal();"
+      style="margin-top:2.5rem;background:none;border:none;color:var(--fg-muted,#94a3b8);font-size:.82rem;cursor:pointer;text-decoration:underline;">
+      Wrong email? Go back
+    </button>
+  `;
+}
 
 // ─── Initialise ───────────────────────────────────────────────────────────────
 _applyAuthMode(false);  // start in Sign In mode

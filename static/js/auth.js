@@ -19,8 +19,14 @@ async function checkAuth() {
 
 // Sign up new user
 async function signUp(email, password, displayName) {
-    const opts = { email, password };
-    if (displayName) opts.options = { data: { full_name: displayName } };
+    const opts = {
+        email,
+        password,
+        options: {
+            emailRedirectTo: window.location.origin + '/onboarding'
+        }
+    };
+    if (displayName) opts.options.data = { full_name: displayName };
     const { data, error } = await supabase.auth.signUp(opts);
 
     if (error) {
@@ -31,7 +37,12 @@ async function signUp(email, password, displayName) {
         return { success: false, error: msg };
     }
 
-    return { success: true, user: data.user };
+    // Empty identities = email already registered (Supabase behaviour when confirm is on)
+    if (data.user?.identities?.length === 0) {
+        return { success: false, error: 'This email is already registered. Please sign in instead.' };
+    }
+
+    return { success: true, user: data.user, session: data.session };
 }
 
 // Sign in user
