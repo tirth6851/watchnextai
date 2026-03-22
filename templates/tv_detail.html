@@ -34,6 +34,38 @@
         .chat-send-btn { padding: .75rem 1.5rem; background: var(--accent); color: white; border: none; border-radius: .5rem; cursor: pointer; font-weight: 700; }
         .chat-send-btn:hover { opacity: .9; }
         .chat-send-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* ── Watching modal ── */
+        .watching-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.7); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        .watching-modal-overlay.open { display: flex; }
+        .watching-modal {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 1.2rem; padding: 2rem; width: min(380px, 92vw);
+            position: relative;
+        }
+        .watching-modal h3 { margin: 0 0 1.2rem; font-size: 1.15rem; }
+        .watching-modal-close {
+            position: absolute; top: .75rem; right: .9rem;
+            background: none; border: none; color: var(--fg-muted);
+            font-size: 1.1rem; cursor: pointer;
+        }
+        .ep-row { display: flex; gap: .75rem; margin-bottom: 1rem; }
+        .ep-field { flex: 1; }
+        .ep-field label { display: block; font-size: .78rem; color: var(--fg-muted); margin-bottom: .3rem; }
+        .ep-field input {
+            width: 100%; padding: .5rem .75rem; border-radius: .5rem;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--fg); font-size: 1rem; box-sizing: border-box;
+        }
+        .watching-stars { display: flex; gap: .3rem; margin-bottom: 1.2rem; }
+        .watching-stars span { font-size: .82rem; color: var(--fg-muted); margin-right: .4rem; align-self: center; }
+        .wstar-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--fg-muted); padding: 0; line-height: 1; transition: color .15s; }
+        .wstar-btn.on, .wstar-btn.hovered { color: #f59e0b; }
+        .watching-modal .action-btn { width: 100%; margin-top: .25rem; }
     </style>
     <script>
         (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
@@ -79,6 +111,7 @@
                     <p id="showOverview" class="detail-overview"></p>
                     <div class="detail-actions">
                         <button id="watchlistBtn" class="action-btn" onclick="toggleWatchlist()">+ Add to Watchlist</button>
+                        <button id="watchingBtn" class="action-btn" onclick="openWatchingModal()">▶ Watching</button>
                         <button id="watchedBtn" class="action-btn" onclick="showRatingWidget()">✓ Mark as Watched</button>
                     </div>
                     <div class="star-rating-widget" id="starRatingWidget">
@@ -126,6 +159,34 @@
         </div>
     </main>
 
+    <!-- Watching Progress Modal -->
+    <div class="watching-modal-overlay" id="watchingModal">
+        <div class="watching-modal">
+            <button class="watching-modal-close" onclick="closeWatchingModal()">✕</button>
+            <h3>▶ Currently Watching</h3>
+            <div class="ep-row">
+                <div class="ep-field">
+                    <label for="seasonInput">Season</label>
+                    <input type="number" id="seasonInput" min="1" value="1" />
+                </div>
+                <div class="ep-field">
+                    <label for="episodeInput">Episode</label>
+                    <input type="number" id="episodeInput" min="1" value="1" />
+                </div>
+            </div>
+            <div style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem;">How are you liking it so far?</div>
+            <div class="watching-stars">
+                <span>Rate:</span>
+                <button class="wstar-btn" data-v="1">★</button>
+                <button class="wstar-btn" data-v="2">★</button>
+                <button class="wstar-btn" data-v="3">★</button>
+                <button class="wstar-btn" data-v="4">★</button>
+                <button class="wstar-btn" data-v="5">★</button>
+            </div>
+            <button class="action-btn" onclick="submitWatchingProgress()">Save Progress</button>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <div class="modal">
@@ -169,6 +230,51 @@
         const tvId = {{ tv_id }};
         let showData = null;
         let inWatchlist = false;
+        let inWatching = false;
+        let _wRating = 0;
+
+        // ── Watching modal ──────────────────────────────────────────────────
+        function openWatchingModal() {
+            document.getElementById('watchingModal').classList.add('open');
+            _initWatchingStars();
+        }
+        function closeWatchingModal() {
+            document.getElementById('watchingModal').classList.remove('open');
+        }
+        function _initWatchingStars() {
+            const btns = document.querySelectorAll('.wstar-btn');
+            btns.forEach(b => {
+                b.classList.toggle('on', +b.dataset.v <= _wRating);
+                b.onmouseenter = () => btns.forEach(x => x.classList.toggle('hovered', +x.dataset.v <= +b.dataset.v));
+                b.onmouseleave = () => btns.forEach(x => x.classList.remove('hovered'));
+                b.onclick = () => {
+                    _wRating = +b.dataset.v;
+                    btns.forEach(x => x.classList.toggle('on', +x.dataset.v <= _wRating));
+                };
+            });
+        }
+        async function submitWatchingProgress() {
+            const session = await checkAuth();
+            if (!session) { closeWatchingModal(); window.showToast('Sign in to track progress.'); openAuthModal(); return; }
+            const season  = parseInt(document.getElementById('seasonInput').value)  || 1;
+            const episode = parseInt(document.getElementById('episodeInput').value) || 1;
+            const r = await markAsWatching(tvId, 'tv', showData?.name, showData?.poster_path, season, episode, _wRating || null);
+            if (r.success) {
+                closeWatchingModal();
+                inWatching = true;
+                const btn = document.getElementById('watchingBtn');
+                btn.classList.add('active');
+                btn.textContent = `▶ S${season}E${episode}`;
+                window.showToast(`Progress saved! S${season}E${episode}`);
+            } else {
+                window.showToast(r.error || 'Error saving progress.', 'error');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('watchingModal')?.addEventListener('click', e => {
+                if (e.target === document.getElementById('watchingModal')) closeWatchingModal();
+            });
+        });
 
         async function toggleWatchlist() {
             const session = await checkAuth();
@@ -204,7 +310,7 @@
             btn.style.display = '';
             const session = await checkAuth();
             if (!session) { window.showToast('Sign in to track watched.'); openAuthModal(); return; }
-            const r = await markAsWatched(tvId, 'tv', showData?.name, rating || null);
+            const r = await markAsWatched(tvId, 'tv', showData?.name, rating || null, showData?.poster_path);
             if (r.success) {
                 btn.classList.add('active');
                 btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';

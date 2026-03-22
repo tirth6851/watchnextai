@@ -425,6 +425,34 @@ def get_genres():
     return jsonify({"genres": (data or {}).get("genres", [])})
 
 
+@app.route("/api/autocomplete")
+def autocomplete():
+    query = request.args.get("query", "").strip()
+    if not query or len(query) < 2:
+        return jsonify({"results": []})
+
+    data, err = tmdb_get("/search/multi", query=query, include_adult="false", page=1)
+    if err:
+        return jsonify({"results": []})
+
+    results = []
+    for item in (data or {}).get("results", [])[:8]:
+        mt = item.get("media_type")
+        if mt not in ("movie", "tv"):
+            continue
+        results.append({
+            "id": item.get("id"),
+            "media_type": mt,
+            "title": item.get("title") or item.get("name"),
+            "year": (item.get("release_date") or item.get("first_air_date") or "")[:4],
+            "poster_path": item.get("poster_path"),
+        })
+        if len(results) >= 6:
+            break
+
+    return jsonify({"results": results, "query": query})
+
+
 @app.route("/api/search")
 def global_search():
     query = request.args.get("query", "").strip()
@@ -546,6 +574,10 @@ def send_welcome_email():
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
+
+@app.route('/onboarding')
+def onboarding():
+    return render_template('onboarding.html')
 
 @app.route('/terms')
 def terms():

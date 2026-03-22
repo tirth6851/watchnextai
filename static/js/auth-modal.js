@@ -198,13 +198,14 @@ async function handleAuthSubmit() {
       updateAuthUI();
 
       if (_authIsSignUp) {
-        showSuccessPopup('Account created! 🎉', '🎬');
         // Send welcome email (best-effort, failure is silent)
         fetch('/api/send-welcome-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         }).catch(() => {});
+        // Redirect new users to onboarding so they can build their library fast
+        window.location.href = '/onboarding';
       } else {
         showSuccessPopup('Signed in successfully! 👋', '✅');
       }

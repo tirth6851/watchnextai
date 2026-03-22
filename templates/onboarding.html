@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Set Up Your Taste • WatchNextAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        body { overflow-x: hidden; }
+
+        .ob-hero {
+            text-align: center;
+            padding: 3rem 1rem 1.5rem;
+        }
+        .ob-hero h1 { font-size: clamp(1.5rem, 4vw, 2.4rem); margin: 0 0 .5rem; }
+        .ob-hero p  { color: var(--fg-muted, #94a3b8); margin: 0 0 .5rem; font-size: 1rem; }
+        .ob-progress-bar {
+            width: min(340px, 80vw); height: 6px;
+            background: var(--border); border-radius: 999px;
+            margin: 1.2rem auto 0; overflow: hidden;
+        }
+        .ob-progress-fill {
+            height: 100%; background: var(--accent); border-radius: 999px;
+            transition: width .4s ease;
+        }
+        .ob-progress-text {
+            text-align: center; font-size: .78rem; color: var(--fg-muted, #94a3b8);
+            margin: .4rem 0 2rem;
+        }
+
+        /* Card stack */
+        .ob-stage {
+            position: relative;
+            width: min(320px, 88vw);
+            height: 460px;
+            margin: 0 auto;
+        }
+        .ob-card {
+            position: absolute; inset: 0;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 1.4rem; overflow: hidden;
+            transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+            will-change: transform;
+            cursor: grab;
+        }
+        .ob-card.exit-left  { transform: translateX(-120%) rotate(-15deg); opacity: 0; pointer-events: none; }
+        .ob-card.exit-right { transform: translateX(120%)  rotate(15deg);  opacity: 0; pointer-events: none; }
+        .ob-card.stack-1 { transform: scale(.95) translateY(12px); z-index: 1; }
+        .ob-card.stack-2 { transform: scale(.9)  translateY(24px); z-index: 0; }
+        .ob-card.active   { z-index: 10; transform: none; }
+        .ob-card img {
+            width: 100%; height: 300px; object-fit: cover; display: block;
+        }
+        .ob-card-info {
+            padding: .9rem 1rem .6rem;
+        }
+        .ob-card-title {
+            font-size: 1.1rem; font-weight: 700; margin: 0 0 .25rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ob-card-meta {
+            font-size: .78rem; color: var(--fg-muted, #94a3b8);
+        }
+
+        /* Action buttons */
+        .ob-actions {
+            display: flex; gap: .65rem; justify-content: center;
+            margin: 1.6rem 0 1rem; flex-wrap: wrap;
+        }
+        .ob-btn {
+            padding: .6rem 1.1rem; border-radius: 999px;
+            border: 1.5px solid var(--border); background: var(--card);
+            color: var(--fg); font-weight: 700; font-size: .88rem;
+            cursor: pointer; transition: all .18s;
+            display: flex; align-items: center; gap: .35rem;
+        }
+        .ob-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+        .ob-btn.watchlist { border-color: #3b82f6; }
+        .ob-btn.watchlist:hover { background: rgba(59,130,246,.2); }
+        .ob-btn.watching  { border-color: #8b5cf6; }
+        .ob-btn.watching:hover  { background: rgba(139,92,246,.2); }
+        .ob-btn.watched   { border-color: #22c55e; }
+        .ob-btn.watched:hover   { background: rgba(34,197,94,.2); }
+        .ob-btn.skip      { border-color: var(--border); opacity: .6; }
+        .ob-btn.skip:hover { opacity: 1; }
+
+        /* Category tabs */
+        .ob-tabs {
+            display: flex; gap: .5rem; justify-content: center;
+            margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .ob-tab {
+            padding: .35rem .9rem; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--fg-muted, #94a3b8); font-size: .82rem; cursor: pointer;
+            transition: all .15s;
+        }
+        .ob-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        /* Done state */
+        .ob-done {
+            display: none; text-align: center; padding: 3rem 1rem;
+        }
+        .ob-done-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .ob-done h2   { font-size: 1.6rem; margin: 0 0 .5rem; }
+        .ob-done p    { color: var(--fg-muted, #94a3b8); margin: 0 0 1.5rem; }
+        .ob-done-btn  {
+            display: inline-block; padding: .85rem 2.2rem;
+            background: var(--accent); color: #fff;
+            border-radius: 999px; font-weight: 700; font-size: 1rem;
+            border: none; cursor: pointer; text-decoration: none;
+        }
+        .ob-done-btn:hover { opacity: .9; }
+
+        .ob-skip-all {
+            display: block; text-align: center; margin: .5rem auto 2rem;
+            color: var(--fg-muted, #94a3b8); font-size: .82rem;
+            background: none; border: none; cursor: pointer; text-decoration: underline;
+        }
+
+        /* Drag hint */
+        .ob-hint {
+            text-align: center; font-size: .76rem;
+            color: var(--fg-muted, #94a3b8); margin: .3rem 0 0;
+            opacity: .7;
+        }
+    </style>
+    <script>
+        (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar--detail" style="position:relative;">
+        <div class="nav-brand">
+            <div class="logo">🎬</div>
+            <div class="brand-text">
+                <div class="brand-title">WatchNextAI</div>
+                <div class="brand-subtitle">Set up your taste</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <button class="pill-btn" onclick="finishOnboarding()">Skip Setup →</button>
+        </div>
+    </nav>
+
+    <main class="page" style="max-width:540px;margin:0 auto;padding:0 1rem 3rem;">
+        <!-- Hero -->
+        <div class="ob-hero">
+            <h1>What have you been watching?</h1>
+            <p>Rate a few titles so we can personalise your feed — like Spotify, but for what you watch.</p>
+            <div class="ob-progress-bar"><div class="ob-progress-fill" id="obProgress" style="width:0%"></div></div>
+            <div class="ob-progress-text" id="obProgressText">0 rated</div>
+        </div>
+
+        <!-- Category tabs -->
+        <div class="ob-tabs">
+            <button class="ob-tab active" onclick="switchCategory('movies')">🎬 Movies</button>
+            <button class="ob-tab" onclick="switchCategory('tv')">📺 TV Shows</button>
+            <button class="ob-tab" onclick="switchCategory('anime')">🎌 Anime</button>
+        </div>
+
+        <!-- Card stack -->
+        <div class="ob-stage" id="obStage">
+            <div class="ob-card stack-2" id="obCard2"><img src="" alt="" /><div class="ob-card-info"><div class="ob-card-title"></div><div class="ob-card-meta"></div></div></div>
+            <div class="ob-card stack-1" id="obCard1"><img src="" alt="" /><div class="ob-card-info"><div class="ob-card-title"></div><div class="ob-card-meta"></div></div></div>
+            <div class="ob-card active"  id="obCard0"><img src="" alt="" /><div class="ob-card-info"><div class="ob-card-title"></div><div class="ob-card-meta"></div></div></div>
+        </div>
+        <p class="ob-hint">← Swipe or use buttons below →</p>
+
+        <!-- Action buttons -->
+        <div class="ob-actions">
+            <button class="ob-btn watchlist" onclick="rateItem('watchlist')">📋 Want to Watch</button>
+            <button class="ob-btn watching"  onclick="rateItem('watching')">▶ Watching</button>
+            <button class="ob-btn watched"   onclick="rateItem('watched')">✓ Watched</button>
+            <button class="ob-btn skip"      onclick="rateItem('skip')">Skip</button>
+        </div>
+        <button class="ob-skip-all" onclick="finishOnboarding()">I'm done, show me my feed →</button>
+
+        <!-- Done screen -->
+        <div class="ob-done" id="obDone">
+            <div class="ob-done-icon">🎉</div>
+            <h2>You're all set!</h2>
+            <p>We've saved your picks. Your feed is now personalised based on what you love.</p>
+            <a href="/" class="ob-done-btn">Start Discovering →</a>
+        </div>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.3/dist/umd/supabase.min.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script>
+        // ── State ────────────────────────────────────────────────────────────
+        const GOAL = 20;
+        let _rated   = 0;
+        let _category = 'movies';
+        let _queue    = [];       // items not yet shown
+        let _cursor   = 0;
+        let _current  = null;    // item on top card
+        let _next1    = null;
+        let _next2    = null;
+        let _loading  = false;
+        let _dragStartX = 0;
+
+        // ── Toast ─────────────────────────────────────────────────────────────
+        window.showToast = function(msg, type) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('show');
+            t.classList.toggle('toast-error', type === 'error');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        };
+
+        // ── Category switch ──────────────────────────────────────────────────
+        function switchCategory(cat) {
+            _category = cat;
+            document.querySelectorAll('.ob-tab').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            _queue = []; _cursor = 0; _current = null; _next1 = null; _next2 = null;
+            loadMore().then(fillCards);
+        }
+
+        // ── Fetch content ────────────────────────────────────────────────────
+        async function loadMore() {
+            if (_loading) return;
+            _loading = true;
+            try {
+                let url;
+                if      (_category === 'movies') url = '/api/movies?category=trending&page=' + (Math.floor(_cursor / 20) + 1);
+                else if (_category === 'tv')      url = '/api/tv_shows?category=trending&page=' + (Math.floor(_cursor / 20) + 1);
+                else                              url = '/api/anime?category=top&page='  + (Math.floor(_cursor / 20) + 1);
+
+                const res  = await fetch(url);
+                const data = await res.json();
+                const items = data.movies || data.shows || data.anime || [];
+
+                items.forEach(item => {
+                    item._cat = _category;
+                    _queue.push(item);
+                });
+            } catch(e) {
+                console.error('onboarding fetch error', e);
+            } finally {
+                _loading = false;
+            }
+        }
+
+        // ── Build card data ──────────────────────────────────────────────────
+        function _itemPoster(item) {
+            if (item._cat === 'anime') {
+                return item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '';
+            }
+            return item.poster_path ? 'https://image.tmdb.org/t/p/w500' + item.poster_path : '';
+        }
+        function _itemTitle(item) {
+            return item.title || item.name || 'Untitled';
+        }
+        function _itemMeta(item) {
+            if (item._cat === 'anime') {
+                const year = item.aired?.from?.slice(0, 4) || '';
+                const eps  = item.episodes ? `${item.episodes} eps` : '';
+                return [year, eps].filter(Boolean).join(' · ');
+            }
+            const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+            const rating = item.vote_average ? `⭐ ${item.vote_average.toFixed(1)}` : '';
+            return [year, rating].filter(Boolean).join(' · ');
+        }
+        function _itemId(item) {
+            return item.mal_id || item.id;
+        }
+        function _itemType(item) { return item._cat === 'movies' ? 'movie' : item._cat; }
+
+        function _fillCard(elId, item) {
+            const card = document.getElementById(elId);
+            if (!card) return;
+            if (!item) { card.style.visibility = 'hidden'; return; }
+            card.style.visibility = '';
+            card.querySelector('img').src = _itemPoster(item) || 'https://via.placeholder.com/320x300?text=No+Image';
+            card.querySelector('.ob-card-title').textContent = _itemTitle(item);
+            card.querySelector('.ob-card-meta').textContent  = _itemMeta(item);
+        }
+
+        function fillCards() {
+            if (_queue.length < 3 && !_loading) loadMore();
+            _current = _queue[0] || null;
+            _next1   = _queue[1] || null;
+            _next2   = _queue[2] || null;
+            _fillCard('obCard0', _current);
+            _fillCard('obCard1', _next1);
+            _fillCard('obCard2', _next2);
+
+            // Reset card states
+            ['obCard0','obCard1','obCard2'].forEach(id => {
+                const c = document.getElementById(id);
+                c.classList.remove('exit-left','exit-right');
+            });
+            document.getElementById('obCard0').className = 'ob-card active';
+            document.getElementById('obCard1').className = 'ob-card stack-1';
+            document.getElementById('obCard2').className = 'ob-card stack-2';
+
+            if (!_current) showDone();
+        }
+
+        // ── Rate / act on item ────────────────────────────────────────────────
+        async function rateItem(action) {
+            if (!_current) return;
+            const item = _current;
+            _queue.shift();
+
+            // Animate card out
+            const top = document.getElementById('obCard0');
+            top.classList.add(action === 'skip' ? 'exit-left' : 'exit-right');
+
+            // Rotate DOM cards visually
+            setTimeout(() => {
+                _queue.unshift(); // already shifted
+                fillCards();
+            }, 340);
+
+            // Update progress
+            if (action !== 'skip') {
+                _rated++;
+                updateProgress();
+            }
+
+            // Persist to Supabase (best-effort)
+            const session = await checkAuth();
+            if (!session) return;
+
+            const id     = _itemId(item);
+            const type   = _itemType(item);
+            const title  = _itemTitle(item);
+            const poster = _itemPoster(item);
+
+            try {
+                if      (action === 'watchlist') await addToWatchlist(id, type, title, poster);
+                else if (action === 'watched')   await markAsWatched(id, type, title, null, poster);
+                else if (action === 'watching')  await markAsWatching(id, type, title, poster, 1, 1, null);
+            } catch(e) { console.warn('save error', e); }
+
+            if (_rated >= GOAL) finishOnboarding();
+        }
+
+        // ── Progress ──────────────────────────────────────────────────────────
+        function updateProgress() {
+            const pct = Math.min(100, (_rated / GOAL) * 100);
+            document.getElementById('obProgress').style.width = pct + '%';
+            document.getElementById('obProgressText').textContent = _rated + ' rated';
+        }
+
+        function showDone() {
+            document.getElementById('obStage').style.display    = 'none';
+            document.querySelector('.ob-actions').style.display  = 'none';
+            document.querySelector('.ob-hint').style.display     = 'none';
+            document.querySelector('.ob-skip-all').style.display = 'none';
+            document.getElementById('obDone').style.display      = 'block';
+        }
+
+        function finishOnboarding() {
+            window.location.href = '/';
+        }
+
+        // ── Swipe support ─────────────────────────────────────────────────────
+        function _setupSwipe() {
+            const stage = document.getElementById('obStage');
+            stage.addEventListener('pointerdown', e => { _dragStartX = e.clientX; });
+            stage.addEventListener('pointerup', e => {
+                const dx = e.clientX - _dragStartX;
+                if (Math.abs(dx) > 60) rateItem(dx > 0 ? 'watchlist' : 'skip');
+            });
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        (async function init() {
+            await loadMore();
+            fillCards();
+            _setupSwipe();
+        })();
+    </script>
+</body>
+</html>

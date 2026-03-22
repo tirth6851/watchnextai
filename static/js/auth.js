@@ -131,12 +131,12 @@ async function getWatchlist() {
 }
 
 // Mark as watched
-async function markAsWatched(mediaId, mediaType, title, rating) {
+async function markAsWatched(mediaId, mediaType, title, rating, posterPath) {
     const session = await checkAuth();
     if (!session) {
         return { success: false, error: 'Not authenticated' };
     }
-    
+
     const { data, error } = await supabase
         .from('watched')
         .insert({
@@ -144,6 +144,7 @@ async function markAsWatched(mediaId, mediaType, title, rating) {
             media_id: mediaId,
             media_type: mediaType,
             title: title,
+            poster_path: posterPath || null,
             rating: rating
         });
     
@@ -182,16 +183,75 @@ async function getWatched() {
     if (!session) {
         return { success: false, error: 'Not authenticated' };
     }
-    
+
     const { data, error } = await supabase
         .from('watched')
         .select('*')
         .eq('user_id', session.user.id);
-    
+
     if (error) {
         console.error('Get watched error:', error);
         return { success: false, error: error.message };
     }
-    
+
+    return { success: true, data: data };
+}
+
+// ── Watching (currently watching with episode progress) ──────────────────────
+
+async function markAsWatching(mediaId, mediaType, title, posterPath, season, episode, rating) {
+    const session = await checkAuth();
+    if (!session) return { success: false, error: 'Not authenticated' };
+
+    const { error } = await supabase
+        .from('watching')
+        .upsert({
+            user_id: session.user.id,
+            media_id: mediaId,
+            media_type: mediaType,
+            title: title,
+            poster_path: posterPath || null,
+            current_season: season || 1,
+            current_episode: episode || 1,
+            rating: rating || null
+        }, { onConflict: 'user_id,media_id,media_type' });
+
+    if (error) {
+        console.error('Mark as watching error:', error);
+        return { success: false, error: error.message };
+    }
+    return { success: true };
+}
+
+async function removeFromWatching(mediaId) {
+    const session = await checkAuth();
+    if (!session) return { success: false, error: 'Not authenticated' };
+
+    const { error } = await supabase
+        .from('watching')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('media_id', mediaId);
+
+    if (error) {
+        console.error('Remove from watching error:', error);
+        return { success: false, error: error.message };
+    }
+    return { success: true };
+}
+
+async function getWatching() {
+    const session = await checkAuth();
+    if (!session) return { success: false, error: 'Not authenticated' };
+
+    const { data, error } = await supabase
+        .from('watching')
+        .select('*')
+        .eq('user_id', session.user.id);
+
+    if (error) {
+        console.error('Get watching error:', error);
+        return { success: false, error: error.message };
+    }
     return { success: true, data: data };
 }
