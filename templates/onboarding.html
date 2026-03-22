@@ -37,7 +37,7 @@
         }
         .ob-card {
             position: absolute; inset: 0;
-            background: var(--card); border: 1px solid var(--border);
+            background: var(--bg); border: 1px solid var(--border);
             border-radius: 1.4rem; overflow: hidden;
             transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
             will-change: transform;
@@ -53,13 +53,17 @@
         }
         .ob-card-info {
             padding: .9rem 1rem .6rem;
+            background: rgba(11, 15, 24, 0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .ob-card-title {
-            font-size: 1.1rem; font-weight: 700; margin: 0 0 .25rem;
+            font-size: 1.05rem; font-weight: 700; margin: 0 0 .25rem;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            color: #fff;
         }
         .ob-card-meta {
-            font-size: .78rem; color: var(--fg-muted, #94a3b8);
+            font-size: .78rem; color: rgba(255,255,255,.6);
         }
 
         /* Action buttons */
