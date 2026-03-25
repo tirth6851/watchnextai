@@ -292,7 +292,7 @@
                     if (!_seenIds.has(_itemId(item))) { _queue.push(item); _seenIds.add(_itemId(item)); }
                 });
             } catch(e) {
-                console.error('onboarding fetch error', e);
+                _trendingPage++; console.error('onboarding fetch error', e);
             } finally {
                 _loading = false;
             }
