@@ -225,7 +225,8 @@ Keep responses concise (2-3 paragraphs max) and friendly."""
         return jsonify({"error": f"Chat error: {str(e)}"}), 500
 
 
-@app.route("/health") @app.route("/api/health")
+@app.route("/health")
+@app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "tmdb_key_present": bool(TMDB_API_KEY)})
 
