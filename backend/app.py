@@ -25,6 +25,13 @@ app = Flask(
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 REQUEST_TIMEOUT = 10
+# Public anon key — safe to hardcode (already in JS frontend)
+SUPABASE_URL  = os.getenv("SUPABASE_URL",  "https://lqlqurgthkdknxwwgygx.supabase.co")
+SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im"
+    "xxbHF1cmd0aGtka254d3dneWd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDkzNDcsImV"
+    "4cCI6MjA4NjUyNTM0N30.OzS9coMZ3YJc9lumZWrIo5aQS2zT0YHHu3I1rKDoioI"
+)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq client
@@ -790,10 +797,8 @@ def get_comments():
     media_type = request.args.get("media_type", "movie")
     if not media_id:
         return jsonify({"results": []}), 400
-    # Read directly from Supabase REST
+    # Read directly from Supabase REST (SELECT is allowed for all via RLS)
     import urllib.parse
-    supa_url  = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
-    supa_key  = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
     params = urllib.parse.urlencode({
         "media_id":   f"eq.{media_id}",
         "media_type": f"eq.{media_type}",
@@ -803,8 +808,8 @@ def get_comments():
     })
     try:
         resp = requests.get(
-            f"{supa_url}/rest/v1/comments?{params}",
-            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+            f"{SUPABASE_URL}/rest/v1/comments?{params}",
+            headers={"apikey": SUPABASE_ANON, "Authorization": f"Bearer {SUPABASE_ANON}"},
             timeout=REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
@@ -829,18 +834,16 @@ def post_comment():
     if not _is_clean(content):
         return jsonify({"error": "Your comment was flagged. Please keep it respectful."}), 400
 
-    supa_url = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
-    supa_anon = os.getenv("SUPABASE_ANON_KEY", "")
-    supa_service = os.getenv("SUPABASE_SERVICE_KEY", "")
     # Use the user's JWT forwarded from the browser so Supabase RLS can verify
     # auth.uid() == user_id.  Fall back to service key if present (bypasses RLS).
     user_jwt = (request.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
-    bearer = user_jwt or supa_service or supa_anon
+    supa_service = os.getenv("SUPABASE_SERVICE_KEY", "")
+    bearer = user_jwt or supa_service or SUPABASE_ANON
     try:
         resp = requests.post(
-            f"{supa_url}/rest/v1/comments",
+            f"{SUPABASE_URL}/rest/v1/comments",
             headers={
-                "apikey": supa_anon or supa_service,
+                "apikey": SUPABASE_ANON,
                 "Authorization": f"Bearer {bearer}",
                 "Content-Type": "application/json",
                 "Prefer": "return=representation",
