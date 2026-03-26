@@ -303,7 +303,8 @@ def get_movie_credits(movie_id):
     if err:
         return jsonify({"error": err}), 502
     cast = [
-        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"),
+         "profile_path": m.get("profile_path"), "popularity": round(m.get("popularity", 0), 1)}
         for m in (data or {}).get("cast", [])[:8]
     ]
     return jsonify({"cast": cast})
@@ -314,7 +315,8 @@ def get_tv_credits(tv_id):
     if err:
         return jsonify({"error": err}), 502
     cast = [
-        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"),
+         "profile_path": m.get("profile_path"), "popularity": round(m.get("popularity", 0), 1)}
         for m in (data or {}).get("cast", [])[:8]
     ]
     return jsonify({"cast": cast})
@@ -736,7 +738,21 @@ def get_person_credits(person_id):
         key=lambda x: x.get("popularity", 0),
         reverse=True
     )[:24]
-    return jsonify({"cast": cast})
+    trimmed = [
+        {
+            "id": c.get("id"),
+            "title": c.get("title") or c.get("name"),
+            "media_type": c.get("media_type"),
+            "poster_path": c.get("poster_path"),
+            "character": c.get("character"),
+            "job": c.get("job"),
+            "release_date": c.get("release_date") or c.get("first_air_date"),
+            "vote_average": round(c.get("vote_average", 0), 1),
+            "vote_count": c.get("vote_count", 0),
+        }
+        for c in cast
+    ]
+    return jsonify({"cast": trimmed})
 
 
 # ── Movie / TV credits — now include person id ──────────────────────────────────
