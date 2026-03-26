@@ -830,13 +830,18 @@ def post_comment():
         return jsonify({"error": "Your comment was flagged. Please keep it respectful."}), 400
 
     supa_url = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
-    supa_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
+    supa_anon = os.getenv("SUPABASE_ANON_KEY", "")
+    supa_service = os.getenv("SUPABASE_SERVICE_KEY", "")
+    # Use the user's JWT forwarded from the browser so Supabase RLS can verify
+    # auth.uid() == user_id.  Fall back to service key if present (bypasses RLS).
+    user_jwt = (request.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+    bearer = user_jwt or supa_service or supa_anon
     try:
         resp = requests.post(
             f"{supa_url}/rest/v1/comments",
             headers={
-                "apikey": supa_key,
-                "Authorization": f"Bearer {supa_key}",
+                "apikey": supa_anon or supa_service,
+                "Authorization": f"Bearer {bearer}",
                 "Content-Type": "application/json",
                 "Prefer": "return=representation",
             },
