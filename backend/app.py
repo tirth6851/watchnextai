@@ -410,31 +410,37 @@ def get_anime_recommendations(anime_id):
 @app.route("/api/recommendations")
 def get_recommendations():
     media_type = request.args.get("media_type", "movie")
-    media_id = request.args.get("media_id", type=int)
-    page = request.args.get("page", 1, type=int)
+    media_id   = request.args.get("media_id",   type=int)
+    user_id    = request.args.get("user_id",    "").strip()
+    page       = request.args.get("page",       1, type=int)
 
-    if not media_id:
-        return jsonify({"results": [], "error": "media_id required"}), 400
+    if not media_id and not user_id:
+        return jsonify({"results": [], "error": "media_id or user_id required"}), 400
 
-    if media_type == "movie":
-        data, err = tmdb_get(f"/movie/{media_id}/recommendations", page=page)
-        if err:
-            return jsonify({"results": [], "error": err}), 502
-        results = (data or {}).get("results", [])
-        for r in results:
-            r["media_type"] = "movie"
-        return jsonify({"results": results})
+    if media_type not in ("movie", "tv"):
+        return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
 
-    if media_type == "tv":
-        data, err = tmdb_get(f"/tv/{media_id}/recommendations", page=page)
-        if err:
-            return jsonify({"results": [], "error": err}), 502
-        results = (data or {}).get("results", [])
-        for r in results:
-            r["media_type"] = "tv"
-        return jsonify({"results": results})
+    from recommender import recommend_for_user, recommend_content_based
 
-    return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
+    supa_url = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
+    supa_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
+
+    if user_id:
+        # Personalised path: score candidates using user history + ratings
+        results = recommend_for_user(
+            user_id, media_type, TMDB_API_KEY, supa_url, supa_key
+        )
+        # Fall back to content-based if this user has no history for the media_type
+        if not results and media_id:
+            results = recommend_content_based(media_type, media_id, TMDB_API_KEY)
+    else:
+        # Anonymous path: enhanced content-based (deduped + quality-sorted)
+        results = recommend_content_based(media_type, media_id, TMDB_API_KEY)
+
+    # Pagination shim so existing callers using page= still work
+    per_page = 20
+    start    = (page - 1) * per_page
+    return jsonify({"results": results[start: start + per_page]})
 
 
 @app.route("/api/genres")

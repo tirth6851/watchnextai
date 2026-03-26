@@ -316,7 +316,9 @@
 
         async function loadRecommendations() {
             try {
-                const res = await fetch(`/api/recommendations?media_type=movie&media_id=${movieId}`);
+                const session = await checkAuth();
+                const uid = session?.user?.id ? `&user_id=${encodeURIComponent(session.user.id)}` : '';
+                const res = await fetch(`/api/recommendations?media_type=movie&media_id=${movieId}${uid}`);
                 if (!res.ok) return;
                 const { results = [] } = await res.json();
                 if (!results.length) return;
