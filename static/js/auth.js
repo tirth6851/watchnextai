@@ -31,14 +31,18 @@ async function signUp(email, password, displayName) {
 
     if (error) {
         console.error('Sign up error:', error);
+        // Supabase returns user_already_exists when email confirmation is off
+        if (error.code === 'user_already_exists' || error.message?.toLowerCase().includes('already registered')) {
+            return { success: false, error: 'This email is already registered. Please sign in instead.' };
+        }
         const msg = error.message === 'Failed to fetch'
             ? 'Cannot reach auth server. Check your internet connection or try again later.'
             : error.message;
         return { success: false, error: msg };
     }
 
-    // Empty identities = email already registered (Supabase behaviour when confirm is on)
-    if (data.user?.identities?.length === 0) {
+    // Empty identities = email already registered (Supabase behaviour when email confirmation is on)
+    if (!data.user || data.user?.identities?.length === 0) {
         return { success: false, error: 'This email is already registered. Please sign in instead.' };
     }
 

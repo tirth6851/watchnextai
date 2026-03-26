@@ -696,7 +696,8 @@ async function loadSuggestions() {
 
   for (const item of recentNonAnime) {
     try {
-      const res = await fetch(`/api/recommendations?media_type=${item.media_type}&media_id=${item.media_id}`);
+      const uid = session?.user?.id ? `&user_id=${encodeURIComponent(session.user.id)}` : "";
+      const res = await fetch(`/api/recommendations?media_type=${item.media_type}&media_id=${item.media_id}${uid}`);
       if (!res.ok) continue;
       const { results = [] } = await res.json();
       if (!results.length) continue;

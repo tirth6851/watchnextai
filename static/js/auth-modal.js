@@ -107,8 +107,14 @@ function _ensureExtraFields() {
         <span>or continue with email</span>
         <div style="flex:1;height:1px;background:var(--border);"></div>
       </div>`;
-    const title = document.getElementById('authModalTitle');
-    if (title) title.insertAdjacentElement('afterend', section);
+    // Try to insert after the title; fall back to prepending inside the modal div
+    const title  = document.getElementById('authModalTitle');
+    const modal  = document.querySelector('#authModal .modal');
+    if (title) {
+      title.insertAdjacentElement('afterend', section);
+    } else if (modal) {
+      modal.insertBefore(section, modal.firstChild);
+    }
   }
 
   // OTP code input
