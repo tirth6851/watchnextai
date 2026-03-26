@@ -1537,3 +1537,5 @@ html[data-theme="light"] .dynamic-bg {
 /* ===== Cast popularity + person card rating ===== */
 .cast-pop { display: block; font-size: .62rem; color: var(--fg-muted); margin-top: .15rem; }
 .person-card-rating { color: #f59e0b; font-size: .65rem; font-weight: 700; }
+.show-more-btn { display: block; margin: 1.5rem auto 0; padding: .6rem 2rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+.show-more-btn:hover { opacity: .85; }
