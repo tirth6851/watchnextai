@@ -303,7 +303,7 @@ def get_movie_credits(movie_id):
     if err:
         return jsonify({"error": err}), 502
     cast = [
-        {"name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
         for m in (data or {}).get("cast", [])[:8]
     ]
     return jsonify({"cast": cast})
@@ -314,7 +314,7 @@ def get_tv_credits(tv_id):
     if err:
         return jsonify({"error": err}), 502
     cast = [
-        {"name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
+        {"id": m.get("id"), "name": m.get("name"), "character": m.get("character"), "profile_path": m.get("profile_path")}
         for m in (data or {}).get("cast", [])[:8]
     ]
     return jsonify({"cast": cast})
@@ -356,6 +356,24 @@ def get_anime():
         
     except requests.exceptions.RequestException as e:
         return jsonify({"anime": [], "error": str(e)}), 502
+
+@app.route("/api/movie/<int:movie_id>/watch-providers")
+def get_movie_watch_providers(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}/watch/providers")
+    if err:
+        return jsonify({"error": err}), 502
+    results = (data or {}).get("results", {})
+    return jsonify(results)
+
+
+@app.route("/api/tv/<int:tv_id>/watch-providers")
+def get_tv_watch_providers(tv_id):
+    data, err = tmdb_get(f"/tv/{tv_id}/watch/providers")
+    if err:
+        return jsonify({"error": err}), 502
+    results = (data or {}).get("results", {})
+    return jsonify(results)
+
 
 @app.route("/api/anime/<int:anime_id>")
 def get_anime_details(anime_id):
@@ -439,18 +457,26 @@ def autocomplete():
         return jsonify({"results": []})
 
     results = []
-    for item in (data or {}).get("results", [])[:8]:
+    for item in (data or {}).get("results", [])[:10]:
         mt = item.get("media_type")
-        if mt not in ("movie", "tv"):
-            continue
-        results.append({
-            "id": item.get("id"),
-            "media_type": mt,
-            "title": item.get("title") or item.get("name"),
-            "year": (item.get("release_date") or item.get("first_air_date") or "")[:4],
-            "poster_path": item.get("poster_path"),
-        })
-        if len(results) >= 6:
+        if mt == "person":
+            known = item.get("known_for_department", "")
+            results.append({
+                "id": item.get("id"),
+                "media_type": "person",
+                "title": item.get("name"),
+                "profile_path": item.get("profile_path"),
+                "known_for": known,
+            })
+        elif mt in ("movie", "tv"):
+            results.append({
+                "id": item.get("id"),
+                "media_type": mt,
+                "title": item.get("title") or item.get("name"),
+                "year": (item.get("release_date") or item.get("first_air_date") or "")[:4],
+                "poster_path": item.get("poster_path"),
+            })
+        if len(results) >= 7:
             break
 
     return jsonify({"results": results, "query": query})
@@ -683,6 +709,145 @@ def schedule_checkin_email():
     t.start()
 
     return jsonify({'success': True, 'scheduled_in_seconds': delay_seconds})
+
+
+# ── Person / Cast pages ────────────────────────────────────────────────────────
+
+@app.route("/person/<int:person_id>")
+def person_detail(person_id):
+    return render_template("person_detail.html", person_id=person_id)
+
+
+@app.route("/api/person/<int:person_id>")
+def get_person(person_id):
+    data, err = tmdb_get(f"/person/{person_id}")
+    if err:
+        return jsonify({"error": err}), 502
+    return jsonify(data or {})
+
+
+@app.route("/api/person/<int:person_id>/credits")
+def get_person_credits(person_id):
+    data, err = tmdb_get(f"/person/{person_id}/combined_credits")
+    if err:
+        return jsonify({"error": err}), 502
+    cast = sorted(
+        [c for c in (data or {}).get("cast", []) if c.get("poster_path")],
+        key=lambda x: x.get("popularity", 0),
+        reverse=True
+    )[:24]
+    return jsonify({"cast": cast})
+
+
+# ── Movie / TV credits — now include person id ──────────────────────────────────
+
+@app.route("/api/movie/<int:movie_id>/reviews")
+def get_movie_reviews(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}/reviews", page=1)
+    if err:
+        return jsonify({"results": []}), 502
+    reviews = [
+        {
+            "author": r.get("author"),
+            "content": r.get("content", "")[:800],
+            "rating": r.get("author_details", {}).get("rating"),
+            "created_at": r.get("created_at", "")[:10],
+        }
+        for r in (data or {}).get("results", [])[:5]
+    ]
+    return jsonify({"results": reviews})
+
+
+@app.route("/api/tv/<int:tv_id>/reviews")
+def get_tv_reviews(tv_id):
+    data, err = tmdb_get(f"/tv/{tv_id}/reviews", page=1)
+    if err:
+        return jsonify({"results": []}), 502
+    reviews = [
+        {
+            "author": r.get("author"),
+            "content": r.get("content", "")[:800],
+            "rating": r.get("author_details", {}).get("rating"),
+            "created_at": r.get("created_at", "")[:10],
+        }
+        for r in (data or {}).get("results", [])[:5]
+    ]
+    return jsonify({"results": reviews})
+
+
+# ── Comments ────────────────────────────────────────────────────────────────────
+
+_PROFANITY = {"fuck","shit","bitch","asshole","cunt","nigger","faggot","retard","whore","slut"}
+
+def _is_clean(text: str) -> bool:
+    words = set(text.lower().split())
+    return not words.intersection(_PROFANITY)
+
+
+@app.route("/api/comments", methods=["GET"])
+def get_comments():
+    media_id   = request.args.get("media_id", type=int)
+    media_type = request.args.get("media_type", "movie")
+    if not media_id:
+        return jsonify({"results": []}), 400
+    # Read directly from Supabase REST
+    import urllib.parse
+    supa_url  = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
+    supa_key  = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
+    params = urllib.parse.urlencode({
+        "media_id":   f"eq.{media_id}",
+        "media_type": f"eq.{media_type}",
+        "order":      "created_at.desc",
+        "limit":      "50",
+        "select":     "id,username,content,created_at,user_id",
+    })
+    try:
+        resp = requests.get(
+            f"{supa_url}/rest/v1/comments?{params}",
+            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+            timeout=REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
+        return jsonify({"results": resp.json()})
+    except Exception as e:
+        return jsonify({"results": [], "error": str(e)}), 502
+
+
+@app.route("/api/comments", methods=["POST"])
+def post_comment():
+    data = request.get_json(silent=True) or {}
+    content    = (data.get("content") or "").strip()
+    media_id   = data.get("media_id")
+    media_type = data.get("media_type", "movie")
+    user_id    = data.get("user_id")
+    username   = (data.get("username") or "Anonymous").strip()[:40]
+
+    if not content or not media_id or not user_id:
+        return jsonify({"error": "Missing required fields"}), 400
+    if len(content) > 1000:
+        return jsonify({"error": "Comment too long (max 1000 chars)"}), 400
+    if not _is_clean(content):
+        return jsonify({"error": "Your comment was flagged. Please keep it respectful."}), 400
+
+    supa_url = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
+    supa_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
+    try:
+        resp = requests.post(
+            f"{supa_url}/rest/v1/comments",
+            headers={
+                "apikey": supa_key,
+                "Authorization": f"Bearer {supa_key}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            json={"content": content, "media_id": media_id, "media_type": media_type,
+                  "user_id": user_id, "username": username},
+            timeout=REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
+        return jsonify({"success": True, "comment": resp.json()[0] if resp.json() else {}})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
 
 
 if __name__ == "__main__":
