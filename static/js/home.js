@@ -163,8 +163,12 @@ async function loadRecommendations() {
   if (error || !watched || watched.length === 0) return;
 
   const seed = watched[0];
+  const uid  = session.user.id;
 
-  const resp = await fetch(`/api/recommendations?media_type=${seed.media_type}&media_id=${seed.media_id}`);
+  // Pass user_id so the backend uses the full personalised recommender
+  const resp = await fetch(
+    `/api/recommendations?media_type=${seed.media_type}&media_id=${seed.media_id}&user_id=${encodeURIComponent(uid)}`
+  );
   if (!resp.ok) return;
   const data = await resp.json();
   const items = (data.results || []).slice(0, 20);
@@ -175,7 +179,7 @@ async function loadRecommendations() {
   const row = document.getElementById("recsRow");
   if (!section || !title || !row) return;
 
-  title.textContent = `✨ Because you watched "${seed.title}"`;
+  title.textContent = `✨ Picked for you`;
   row.innerHTML = "";
   items.forEach((item) => row.appendChild(makeMixedCard(item)));
   section.style.display = "";
