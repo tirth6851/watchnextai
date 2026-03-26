@@ -66,6 +66,11 @@
         .wstar-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--fg-muted); padding: 0; line-height: 1; transition: color .15s; }
         .wstar-btn.on, .wstar-btn.hovered { color: #f59e0b; }
         .watching-modal .action-btn { width: 100%; margin-top: .25rem; }
+        .providers-section { margin-top: 2rem; }
+        .providers-section h2 { margin: 0 0 .75rem; font-size: 1.2rem; }
+        .providers-list { display: flex; flex-wrap: wrap; gap: .6rem; }
+        .provider-chip { display: flex; align-items: center; gap: .45rem; padding: .4rem .9rem; background: var(--card); border: 1px solid var(--border); border-radius: 999px; text-decoration: none; color: var(--fg); font-size: .82rem; font-weight: 600; transition: background .2s; }
+        .provider-chip:hover { background: var(--accent-soft); }
     </style>
     <script>
         (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
@@ -133,6 +138,11 @@
                 <iframe id="trailerIframe" src="" title="Anime Trailer" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
+            </div>
+
+            <div class="providers-section" id="providersSection" style="display:none;">
+                <h2>🎥 Where to Watch</h2>
+                <div class="providers-list" id="providersList"></div>
             </div>
 
             <div class="more-like-section" id="moreLikeSection" style="display:none;">
@@ -326,6 +336,14 @@
                 document.getElementById('animeContent').style.display = 'block';
                 loadTrailer();
                 loadRecommendations();
+                const streaming = animeData.streaming || [];
+                if (streaming.length) {
+                    const list = document.getElementById('providersList');
+                    list.innerHTML = streaming.map(s =>
+                        `<a class="provider-chip" href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`
+                    ).join('');
+                    document.getElementById('providersSection').style.display = 'block';
+                }
             } catch {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';

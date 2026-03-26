@@ -34,6 +34,14 @@
         .chat-send-btn { padding: .75rem 1.5rem; background: var(--accent); color: white; border: none; border-radius: .5rem; cursor: pointer; font-weight: 700; }
         .chat-send-btn:hover { opacity: .9; }
         .chat-send-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .providers-section { margin-top: 2rem; }
+        .providers-section h2 { margin: 0 0 .75rem; font-size: 1.2rem; }
+        .providers-group { margin-bottom: 1rem; }
+        .providers-group-label { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--fg-muted, #94a3b8); margin-bottom: .5rem; }
+        .providers-list { display: flex; flex-wrap: wrap; gap: .6rem; }
+        .provider-chip { display: flex; align-items: center; gap: .45rem; padding: .35rem .7rem .35rem .35rem; background: var(--card); border: 1px solid var(--border); border-radius: 999px; text-decoration: none; color: var(--fg); font-size: .82rem; font-weight: 600; transition: background .2s; }
+        .provider-chip:hover { background: var(--accent-soft); }
+        .provider-chip img { width: 22px; height: 22px; border-radius: 4px; object-fit: cover; }
     </style>
     <script>
         // Prevent theme flash
@@ -106,6 +114,11 @@
             <div class="cast-section" id="castSection" style="display:none;">
                 <h2>🎭 Cast</h2>
                 <div class="cast-grid" id="castGrid"></div>
+            </div>
+
+            <div class="providers-section" id="providersSection" style="display:none;">
+                <h2>🎥 Where to Watch</h2>
+                <div id="providersContent"></div>
             </div>
 
             <div class="more-like-section" id="moreLikeSection" style="display:none;">
@@ -365,8 +378,39 @@
             } catch(e) { console.warn('loadUserStatus error', e); }
         }
 
+        async function loadWatchProviders() {
+            try {
+                const res = await fetch(`/api/movie/${movieId}/watch-providers`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const region = (navigator.language || 'en-US').split('-')[1] || 'US';
+                const regionData = data[region] || data['US'];
+                if (!regionData) return;
+                const { flatrate = [], rent = [], buy = [], link } = regionData;
+                if (!flatrate.length && !rent.length && !buy.length) return;
+                const groups = [
+                    { label: 'Stream', providers: flatrate },
+                    { label: 'Rent', providers: rent },
+                    { label: 'Buy', providers: buy }
+                ].filter(g => g.providers.length);
+                const content = document.getElementById('providersContent');
+                content.innerHTML = groups.map(g => `
+                    <div class="providers-group">
+                        <div class="providers-group-label">${g.label}</div>
+                        <div class="providers-list">${g.providers.map(p => `
+                            <a class="provider-chip" href="${link || '#'}" target="_blank" rel="noopener" title="${p.provider_name}">
+                                <img src="https://image.tmdb.org/t/p/original${p.logo_path}" alt="${p.provider_name}" loading="lazy">
+                                ${p.provider_name}
+                            </a>`).join('')}
+                        </div>
+                    </div>`).join('');
+                document.getElementById('providersSection').style.display = 'block';
+            } catch {}
+        }
+
         loadMovieDetails();
         loadUserStatus();
+        loadWatchProviders();
     </script>
 </body>
 </html>

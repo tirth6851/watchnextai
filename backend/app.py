@@ -357,6 +357,24 @@ def get_anime():
     except requests.exceptions.RequestException as e:
         return jsonify({"anime": [], "error": str(e)}), 502
 
+@app.route("/api/movie/<int:movie_id>/watch-providers")
+def get_movie_watch_providers(movie_id):
+    data, err = tmdb_get(f"/movie/{movie_id}/watch/providers")
+    if err:
+        return jsonify({"error": err}), 502
+    results = (data or {}).get("results", {})
+    return jsonify(results)
+
+
+@app.route("/api/tv/<int:tv_id>/watch-providers")
+def get_tv_watch_providers(tv_id):
+    data, err = tmdb_get(f"/tv/{tv_id}/watch/providers")
+    if err:
+        return jsonify({"error": err}), 502
+    results = (data or {}).get("results", {})
+    return jsonify(results)
+
+
 @app.route("/api/anime/<int:anime_id>")
 def get_anime_details(anime_id):
     try:
