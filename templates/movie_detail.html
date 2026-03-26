@@ -126,6 +126,20 @@
                 <div class="more-like-grid" id="moreLikeGrid"></div>
             </div>
 
+            <div class="reviews-section" id="reviewsSection" style="display:none;">
+                <h2>📝 Reviews</h2>
+                <div id="reviewsList"></div>
+            </div>
+
+            <div class="comments-section">
+                <h2>💬 Community</h2>
+                <div class="comment-form" id="commentForm">
+                    <textarea class="comment-input" id="commentInput" rows="2" placeholder="Share your thoughts… (sign in to post)"></textarea>
+                    <button class="comment-submit" id="commentSubmit" onclick="postComment()">Post</button>
+                </div>
+                <div class="comments-list" id="commentsList"><p class="comment-empty">No comments yet. Be the first!</p></div>
+            </div>
+
             <div class="chatbot-container">
                 <div class="chatbot-header"><span>🤖</span><span>Chat about this movie</span></div>
                 <div class="chat-messages" id="chatMessages">
@@ -289,8 +303,9 @@
                     const img = m.profile_path
                         ? `https://image.tmdb.org/t/p/w185${m.profile_path}`
                         : 'https://via.placeholder.com/72x72?text=?';
-                    const el = document.createElement('div');
+                    const el = document.createElement('a');
                     el.className = 'cast-card';
+                    el.href = m.id ? `/person/${m.id}` : '#';
                     el.innerHTML = `<img class="cast-avatar" src="${img}" alt="${m.name||''}" loading="lazy"><p class="cast-name">${m.name||''}</p><p class="cast-character">${m.character||''}</p>`;
                     grid.appendChild(el);
                 });
@@ -408,9 +423,82 @@
             } catch {}
         }
 
+        async function loadReviews() {
+            try {
+                const res = await fetch(`/api/movie/${movieId}/reviews`);
+                if (!res.ok) return;
+                const { results = [] } = await res.json();
+                if (!results.length) return;
+                const list = document.getElementById('reviewsList');
+                list.innerHTML = results.map(r => {
+                    const stars = r.rating ? `⭐ ${r.rating}/10` : '';
+                    return `<div class="review-card">
+                        <div class="review-card-header">
+                            <span class="review-author">${r.author || 'Anonymous'}</span>
+                            ${stars ? `<span class="review-rating">${stars}</span>` : ''}
+                            <span class="review-date">${r.created_at || ''}</span>
+                        </div>
+                        <div class="review-content collapsed" id="rc-${Math.random().toString(36).slice(2)}">${r.content}</div>
+                        <button class="review-toggle" onclick="this.previousElementSibling.classList.toggle('collapsed');this.textContent=this.previousElementSibling.classList.contains('collapsed')?'Read more':'Show less'">Read more</button>
+                    </div>`;
+                }).join('');
+                document.getElementById('reviewsSection').style.display = 'block';
+            } catch {}
+        }
+
+        async function loadComments() {
+            try {
+                const res = await fetch(`/api/comments?media_id=${movieId}&media_type=movie`);
+                const { results = [] } = await res.json();
+                renderComments(results);
+            } catch {}
+        }
+
+        function renderComments(comments) {
+            const list = document.getElementById('commentsList');
+            if (!comments.length) { list.innerHTML = '<p class="comment-empty">No comments yet. Be the first!</p>'; return; }
+            list.innerHTML = comments.map(c => {
+                const initials = (c.username || '?')[0].toUpperCase();
+                const time = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+                return `<div class="comment-card">
+                    <div class="comment-avatar">${initials}</div>
+                    <div class="comment-body">
+                        <div class="comment-username">${c.username || 'Anonymous'}</div>
+                        <div class="comment-text">${c.content.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                        <div class="comment-time">${time}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function postComment() {
+            const session = await checkAuth();
+            if (!session) { window.showToast('Sign in to post a comment.'); openAuthModal(); return; }
+            const input = document.getElementById('commentInput');
+            const content = input.value.trim();
+            if (!content) return;
+            const btn = document.getElementById('commentSubmit');
+            btn.disabled = true;
+            const username = session.user?.user_metadata?.full_name || session.user?.email?.split('@')[0] || 'Anonymous';
+            try {
+                const res = await fetch('/api/comments', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, media_id: movieId, media_type: 'movie', user_id: session.user.id, username })
+                });
+                const data = await res.json();
+                if (!res.ok) { window.showToast(data.error || 'Error posting comment.', 'error'); return; }
+                input.value = '';
+                loadComments();
+                window.showToast('Comment posted!');
+            } catch { window.showToast('Error posting comment.', 'error'); }
+            finally { btn.disabled = false; }
+        }
+
         loadMovieDetails();
         loadUserStatus();
         loadWatchProviders();
+        loadReviews();
+        loadComments();
     </script>
 </body>
 </html>

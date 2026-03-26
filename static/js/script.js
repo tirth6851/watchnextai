@@ -818,46 +818,6 @@ function hideDropdown() {
   if (searchDropdown) searchDropdown.classList.remove("open");
 }
 
-function showDropdown(results, query) {
-  if (!searchDropdown) return;
-  searchDropdown.innerHTML = "";
-
-  if (!results.length) { hideDropdown(); return; }
-
-  // Spell-hint: if top result title starts very differently from query, show "Did you mean?"
-  const topTitle = (results[0].title || "").toLowerCase();
-  const q = query.toLowerCase().trim();
-  const similarity = q.split("").filter((c) => topTitle.includes(c)).length / Math.max(q.length, 1);
-  if (similarity < 0.6 && topTitle.length > 0 && q.length >= 3) {
-    const hint = document.createElement("div");
-    hint.className = "search-spell-hint";
-    hint.innerHTML = `Did you mean: <strong onclick="useSpellSuggestion('${results[0].title.replace(/'/g, "\\'")}')">${results[0].title}</strong>?`;
-    searchDropdown.appendChild(hint);
-  }
-
-  results.forEach((item) => {
-    const a = document.createElement("a");
-    a.className = "search-dropdown-item";
-    a.href = `/${item.media_type}/${item.id}`;
-    const thumb = item.poster_path
-      ? `https://image.tmdb.org/t/p/w92${item.poster_path}`
-      : "https://via.placeholder.com/34x50?text=?";
-    const badgeCls = `sdb--${item.media_type}`;
-    const typeLabel = item.media_type === "tv" ? "TV Show" : "Movie";
-    a.innerHTML = `
-      <img class="search-dropdown-thumb" src="${thumb}" alt="${item.title || ""}" loading="lazy" />
-      <div class="search-dropdown-info">
-        <div class="search-dropdown-title">${item.title || "Untitled"}</div>
-        <div class="search-dropdown-sub">${item.year || "—"}</div>
-      </div>
-      <span class="search-dropdown-badge ${badgeCls}">${typeLabel}</span>`;
-    a.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus on input
-    searchDropdown.appendChild(a);
-  });
-
-  searchDropdown.classList.add("open");
-}
-
 function useSpellSuggestion(title) {
   if (searchInput) searchInput.value = title;
   hideDropdown();
@@ -872,6 +832,59 @@ async function triggerAutocomplete(query) {
     const { results = [] } = await res.json();
     showDropdown(results, query);
   } catch {}
+}
+
+function showDropdown(results, query) {
+  if (!searchDropdown) return;
+  searchDropdown.innerHTML = "";
+  if (!results.length) { hideDropdown(); return; }
+
+  // Spell-hint
+  const topTitle = (results[0].title || "").toLowerCase();
+  const q = query.toLowerCase().trim();
+  const similarity = q.split("").filter((c) => topTitle.includes(c)).length / Math.max(q.length, 1);
+  if (similarity < 0.6 && topTitle.length > 0 && q.length >= 3) {
+    const hint = document.createElement("div");
+    hint.className = "search-spell-hint";
+    hint.innerHTML = `Did you mean: <strong onclick="useSpellSuggestion('${results[0].title.replace(/'/g, "\\'")}')">${results[0].title}</strong>?`;
+    searchDropdown.appendChild(hint);
+  }
+
+  results.forEach((item, idx) => {
+    const a = document.createElement("a");
+    a.className = "search-dropdown-item";
+    a.style.animationDelay = `${idx * 30}ms`;
+    if (item.media_type === "person") {
+      a.href = `/person/${item.id}`;
+      const thumb = item.profile_path
+        ? `https://image.tmdb.org/t/p/w92${item.profile_path}`
+        : "https://via.placeholder.com/34x50?text=?";
+      a.innerHTML = `
+        <img class="search-dropdown-thumb search-dropdown-thumb--round" src="${thumb}" alt="${item.title || ""}" loading="lazy" />
+        <div class="search-dropdown-info">
+          <div class="search-dropdown-title">${item.title || "Unknown"}</div>
+          <div class="search-dropdown-sub">${item.known_for || "Actor / Director"}</div>
+        </div>
+        <span class="search-dropdown-badge sdb--person">Person</span>`;
+    } else {
+      a.href = `/${item.media_type}/${item.id}`;
+      const thumb = item.poster_path
+        ? `https://image.tmdb.org/t/p/w92${item.poster_path}`
+        : "https://via.placeholder.com/34x50?text=?";
+      const badgeCls = `sdb--${item.media_type}`;
+      const typeLabel = item.media_type === "tv" ? "TV Show" : "Movie";
+      a.innerHTML = `
+        <img class="search-dropdown-thumb" src="${thumb}" alt="${item.title || ""}" loading="lazy" />
+        <div class="search-dropdown-info">
+          <div class="search-dropdown-title">${item.title || "Untitled"}</div>
+          <div class="search-dropdown-sub">${item.year || "—"}</div>
+        </div>
+        <span class="search-dropdown-badge ${badgeCls}">${typeLabel}</span>`;
+    }
+    searchDropdown.appendChild(a);
+  });
+
+  searchDropdown.classList.add("open");
 }
 
 if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
@@ -904,7 +917,7 @@ loadTheme();
   const typeParam = params.get("type");
   const catParam = params.get("category");
 
-  if (typeParam && ["movies", "tv", "anime"].includes(typeParam)) {
+  if (typeParam && ["movies", "tv", "anime", "foryou"].includes(typeParam)) {
     state.currentContentType = typeParam;
     document.querySelectorAll(".content-type-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.type === typeParam);
@@ -933,10 +946,24 @@ updateNavForContentType();
 setActiveCategoryButton(state.currentCategory);
 updateHeader();
 if (container) {
-  if (state.currentContentType === "movies" || state.currentContentType === "tv") {
-    loadGenreBar(state.currentContentType);
+  if (state.currentContentType === "foryou") {
+    // URL came in with ?type=foryou — show the For You page directly
+    const mainGrid = document.getElementById("movie-container");
+    if (mainGrid) mainGrid.style.display = "none";
+    if (navLinks) navLinks.querySelectorAll(".nav-link").forEach((b) => (b.style.display = "none"));
+    const bar = document.getElementById("genreBar");
+    if (bar) bar.style.display = "none";
+    const sugSection = document.getElementById("suggestionsSection");
+    if (sugSection) sugSection.style.display = "block";
+    if (pageTitle) pageTitle.textContent = "✨ For You";
+    if (pageHint) pageHint.textContent = "Personalised picks based on your watch history.";
+    loadSuggestions();
+  } else {
+    if (state.currentContentType === "movies" || state.currentContentType === "tv") {
+      loadGenreBar(state.currentContentType);
+    }
+    resetAndLoad();
   }
-  resetAndLoad();
 }
 
 window.addEventListener("scroll", handleScroll);

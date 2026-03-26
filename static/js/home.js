@@ -147,6 +147,10 @@ async function loadRecommendations() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
 
+  // Show "For You" nav link for signed-in users
+  const fyLink = document.getElementById("forYouNavLink");
+  if (fyLink) fyLink.style.display = "";
+
   // Fetch the most recently watched movie or TV item (anime not supported by TMDB recs)
   const { data: watched, error } = await supabase
     .from("watched")

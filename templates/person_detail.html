@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Person • WatchNextAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script>
+        (function(){var t=localStorage.getItem('wn_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
+</head>
+<body>
+    <div id="dynamicBg" class="dynamic-bg"></div>
+    <nav class="navbar navbar--detail">
+        <div class="nav-brand">
+            <div class="logo">🎬</div>
+            <div class="brand-text">
+                <div class="brand-title">WatchNextAI</div>
+                <div class="brand-subtitle">Person details</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <a class="pill-btn" href="javascript:history.back()">← Back</a>
+            <span id="authGreeting" class="auth-greeting" style="display:none;"></span>
+            <a id="profileBtn" href="/profile" class="pill-btn" style="display:none;">👤 Profile</a>
+            <button id="themeToggle" class="pill-btn" type="button">
+                <span id="themeIcon">🌙</span>
+                <span id="themeLabel">Dark</span>
+            </button>
+            <button id="authBtn" class="pill-btn" type="button" onclick="openAuthModal()">Sign In</button>
+        </div>
+    </nav>
+
+    <main>
+        <div id="loading" style="text-align:center;padding:3rem;">Loading…</div>
+        <div id="error" style="display:none;text-align:center;padding:3rem;color:#ef4444;"></div>
+
+        <div id="personContent" class="person-detail" style="display:none;">
+            <div class="person-hero" id="personHero"></div>
+            <div class="person-filmography" id="personFilmography" style="display:none;">
+                <h2>🎬 Filmography</h2>
+                <div class="person-grid" id="personGrid"></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="modal">
+            <button class="modal-close" onclick="closeAuthModal()" aria-label="Close">✕</button>
+            <h2 id="authModalTitle">Welcome Back</h2>
+            <div class="modal-field" id="nameField" style="display:none;">
+                <label for="authName">Name</label>
+                <input type="text" id="authName" placeholder="Your name" autocomplete="name" />
+            </div>
+            <div class="modal-field">
+                <label for="authEmail">Email</label>
+                <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" />
+            </div>
+            <div class="modal-field">
+                <label for="authPassword">Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+                    <button class="password-toggle" type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">👁</button>
+                </div>
+            </div>
+            <div id="strengthContainer" style="display:none;" class="strength-container">
+                <div class="strength-track"><div id="strengthBar" class="strength-bar"></div></div>
+                <span id="strengthLabel" class="strength-label"></span>
+            </div>
+            <div class="modal-error" id="authError"></div>
+            <button class="modal-submit" id="authSubmit" onclick="handleAuthSubmit()">Sign In</button>
+            <div class="modal-toggle">
+                <span id="authToggleText">Don't have an account?</span>
+                <button id="authToggleBtn" onclick="toggleAuthMode()">Sign Up</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.3/dist/umd/supabase.min.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth-modal.js') }}"></script>
+    <script>
+        const personId = {{ person_id }};
+
+        function applyTheme(mode) {
+            document.documentElement.setAttribute('data-theme', mode);
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            if (icon) icon.textContent = mode === 'dark' ? '🌙' : '☀️';
+            if (label) label.textContent = mode === 'dark' ? 'Dark' : 'Light';
+        }
+        document.getElementById('themeToggle')?.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('wn_theme', next);
+            applyTheme(next);
+        });
+        function showToast(msg, variant = 'info') {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg; t.classList.add('show');
+            t.classList.toggle('toast-error', variant === 'error');
+            setTimeout(() => t.classList.remove('show'), 3500);
+        }
+        window.showToast = showToast;
+
+        function _mediaUrl(credit) {
+            const mt = credit.media_type;
+            if (mt === 'tv') return `/tv/${credit.id}`;
+            return `/movie/${credit.id}`;
+        }
+
+        async function loadPerson() {
+            try {
+                const [personRes, creditsRes] = await Promise.all([
+                    fetch(`/api/person/${personId}`),
+                    fetch(`/api/person/${personId}/credits`)
+                ]);
+                if (!personRes.ok) throw new Error();
+                const person = await personRes.json();
+                document.title = `${person.name || 'Person'} • WatchNextAI`;
+
+                // Build hero
+                const hero = document.getElementById('personHero');
+                const photo = person.profile_path
+                    ? `<img class="person-photo" src="https://image.tmdb.org/t/p/w342${person.profile_path}" alt="${person.name || ''}" />`
+                    : `<div class="person-photo-placeholder">👤</div>`;
+                const bday = person.birthday ? `🎂 ${person.birthday}` : '';
+                const place = person.place_of_birth ? `📍 ${person.place_of_birth}` : '';
+                const bio = person.biography || '';
+                hero.innerHTML = `
+                    ${photo}
+                    <div>
+                        <h1 class="person-name">${person.name || ''}</h1>
+                        <div class="person-dept">${person.known_for_department || ''}</div>
+                        <div class="person-meta">
+                            ${bday ? `<span>${bday}</span>` : ''}
+                            ${place ? `<span>${place}</span>` : ''}
+                        </div>
+                        ${bio ? `<p class="person-bio collapsed" id="personBio">${bio}</p>
+                        <button class="review-toggle" id="bioToggle" onclick="document.getElementById('personBio').classList.toggle('collapsed');this.textContent=document.getElementById('personBio').classList.contains('collapsed')?'Read more':'Show less'">Read more</button>` : ''}
+                    </div>`;
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('personContent').style.display = 'block';
+
+                // Build filmography
+                if (creditsRes.ok) {
+                    const { cast = [] } = await creditsRes.json();
+                    if (cast.length) {
+                        const grid = document.getElementById('personGrid');
+                        cast.forEach(c => {
+                            const a = document.createElement('a');
+                            a.className = 'person-card';
+                            a.href = _mediaUrl(c);
+                            const poster = c.poster_path
+                                ? `https://image.tmdb.org/t/p/w185${c.poster_path}`
+                                : 'https://via.placeholder.com/115x172?text=No+Image';
+                            const title = c.title || c.name || 'Untitled';
+                            const year = (c.release_date || c.first_air_date || '').slice(0,4);
+                            const role = c.character || c.job || '';
+                            a.innerHTML = `<img src="${poster}" alt="${title}" loading="lazy" /><div class="person-card-title">${title}</div><div class="person-card-sub">${role}${role && year ? ' · ' : ''}${year}</div>`;
+                            grid.appendChild(a);
+                        });
+                        document.getElementById('personFilmography').style.display = 'block';
+                    }
+                }
+            } catch {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Failed to load person details.';
+            }
+        }
+
+        loadPerson();
+    </script>
+</body>
+</html>
