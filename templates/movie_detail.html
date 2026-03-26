@@ -210,6 +210,9 @@
                 btn.classList.add('active');
                 btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';
                 window.showToast(rating ? `Marked as watched! (${rating}/5)` : 'Marked as watched!');
+                const wlBtn = document.getElementById('watchlistBtn');
+                wlBtn.disabled = true; wlBtn.style.opacity = '.4';
+                wlBtn.title = 'You have already watched this';
             } else { window.showToast(r.error || 'Error marking as watched.', 'error'); }
         }
 
@@ -336,7 +339,34 @@
             c.appendChild(d); c.scrollTop = c.scrollHeight;
         }
 
+        async function loadUserStatus() {
+            const session = await checkAuth();
+            if (!session) return;
+            try {
+                const [wlRes, wdRes] = await Promise.all([
+                    supabase.from('watchlist').select('id').eq('user_id', session.user.id).eq('media_id', movieId).eq('media_type', 'movie').maybeSingle(),
+                    supabase.from('watched').select('id,rating').eq('user_id', session.user.id).eq('media_id', movieId).eq('media_type', 'movie').maybeSingle()
+                ]);
+                if (wlRes.data) {
+                    inWatchlist = true;
+                    const btn = document.getElementById('watchlistBtn');
+                    btn.textContent = '✓ In Watchlist'; btn.classList.add('active');
+                }
+                if (wdRes.data) {
+                    const btn = document.getElementById('watchedBtn');
+                    const r = wdRes.data.rating;
+                    btn.classList.add('active');
+                    btn.textContent = r ? `✓ Watched · ${'★'.repeat(r)}` : '✓ Watched';
+                    // Hide watchlist button — already watched
+                    const wlBtn = document.getElementById('watchlistBtn');
+                    wlBtn.disabled = true; wlBtn.style.opacity = '.4';
+                    wlBtn.title = 'You have already watched this';
+                }
+            } catch(e) { console.warn('loadUserStatus error', e); }
+        }
+
         loadMovieDetails();
+        loadUserStatus();
     </script>
 </body>
 </html>

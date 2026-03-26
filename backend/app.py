@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import smtplib
+import threading
+import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -521,6 +523,9 @@ def send_welcome_email():
     if not to_email:
         return jsonify({'error': 'No email provided'}), 400
 
+    from datetime import datetime, timezone
+    agreed_at = data.get('agreed_at') or datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+
     html_body = f"""<!DOCTYPE html>
 <html><head><style>
   body{{margin:0;padding:0;background:#0b0f18;font-family:'Segoe UI',Arial,sans-serif;}}
@@ -532,6 +537,10 @@ def send_welcome_email():
   .cta{{display:inline-block;margin-top:8px;padding:14px 28px;
         background:#7c3aed;color:#fff;border-radius:999px;
         text-decoration:none;font-weight:700;font-size:0.95rem;}}
+  .tc-box{{margin-top:28px;padding:16px 20px;background:rgba(124,58,237,0.12);
+           border:1px solid rgba(124,58,237,0.35);border-radius:12px;}}
+  .tc-box h3{{color:#a78bfa;margin:0 0 8px;font-size:.95rem;}}
+  .tc-box p{{color:#94a3b8;font-size:.82rem;margin:0;}}
   .footer{{margin-top:32px;padding-top:16px;
            border-top:1px solid rgba(148,163,184,0.2);
            color:rgba(203,213,225,0.5);font-size:12px;}}
@@ -548,6 +557,13 @@ def send_welcome_email():
   </ul>
   <p>Jump in and find your next obsession.</p>
   <a class="cta" href="https://watchnextai.vercel.app">Start Discovering →</a>
+  <div class="tc-box">
+    <h3>📋 Terms &amp; Conditions Agreement</h3>
+    <p>By creating your account, you confirmed that you have read and agreed to WatchNextAI's
+       <a href="https://watchnextai.vercel.app/terms" style="color:#a78bfa;">Terms &amp; Conditions</a>
+       and <a href="https://watchnextai.vercel.app/privacy" style="color:#a78bfa;">Privacy Policy</a>.<br>
+       Agreement recorded on: <strong style="color:#cbd5e1;">{agreed_at}</strong></p>
+  </div>
   <div class="footer">
     WatchNextAI &nbsp;·&nbsp; {to_email}<br>
     If you didn't sign up, you can safely ignore this email.
@@ -587,6 +603,86 @@ def terms():
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+
+def _send_checkin_email(to_email, title, media_type, user_name):
+    smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('SMTP_PORT', '587'))
+    smtp_user = os.getenv('SMTP_USER')
+    smtp_pass = os.getenv('SMTP_PASS')
+    if not smtp_user or not smtp_pass:
+        return
+
+    greeting = f"Hey {user_name}!" if user_name else "Hey!"
+    type_label = {'movie': 'movie', 'tv': 'TV show', 'anime': 'anime'}.get(media_type, 'title')
+
+    html_body = f"""<!DOCTYPE html>
+<html><head><style>
+  body{{margin:0;padding:0;background:#0b0f18;font-family:'Segoe UI',Arial,sans-serif;}}
+  .wrap{{max-width:520px;margin:40px auto;background:rgba(255,255,255,0.06);
+         border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:36px;}}
+  h2{{color:#7c3aed;margin:0 0 14px;font-size:1.35rem;}}
+  p{{color:#cbd5e1;line-height:1.65;margin:0 0 12px;}}
+  .title{{color:#fff;font-weight:700;}}
+  .cta{{display:inline-block;margin-top:10px;padding:12px 26px;
+        background:#7c3aed;color:#fff;border-radius:999px;
+        text-decoration:none;font-weight:700;font-size:.92rem;}}
+  .footer{{margin-top:28px;padding-top:14px;
+           border-top:1px solid rgba(148,163,184,0.2);
+           color:rgba(203,213,225,0.45);font-size:11px;}}
+</style></head><body>
+<div class="wrap">
+  <h2>📺 WatchNextAI Check-in</h2>
+  <p>{greeting} Just checking in on you.</p>
+  <p>You recently added <span class="title">{title}</span> to your list.
+     How are you getting on with it? Have you started watching yet?</p>
+  <p>Whatever stage you're at — we've got plenty more {type_label}s lined up for you
+     when you're ready for your next pick.</p>
+  <a class="cta" href="https://watchnextai.vercel.app/profile">Check my list →</a>
+  <div class="footer">
+    WatchNextAI &nbsp;·&nbsp; {to_email}<br>
+    You received this because you added content to your list. To stop these, remove items from your list.
+  </div>
+</div>
+</body></html>"""
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f'📺 Still thinking about {title}?'
+        msg['From']    = smtp_user
+        msg['To']      = to_email
+        msg.attach(MIMEText(html_body, 'html'))
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+    except Exception:
+        pass  # best-effort; never surface email errors to users
+
+
+@app.route('/api/schedule-checkin-email', methods=['POST'])
+def schedule_checkin_email():
+    smtp_user = os.getenv('SMTP_USER')
+    smtp_pass = os.getenv('SMTP_PASS')
+    if not smtp_user or not smtp_pass:
+        return jsonify({'success': True, 'note': 'Email service not configured'})
+
+    data = request.get_json(silent=True) or {}
+    to_email  = data.get('email', '').strip()
+    title     = data.get('title', 'your title').strip()
+    media_type = data.get('media_type', 'movie').strip()
+    user_name = data.get('user_name', '').strip()
+
+    if not to_email:
+        return jsonify({'error': 'No email provided'}), 400
+
+    # Schedule send 1–5 hours from now (in seconds)
+    delay_seconds = random.randint(3600, 18000)
+    t = threading.Timer(delay_seconds, _send_checkin_email, args=[to_email, title, media_type, user_name])
+    t.daemon = True
+    t.start()
+
+    return jsonify({'success': True, 'scheduled_in_seconds': delay_seconds})
 
 
 if __name__ == "__main__":

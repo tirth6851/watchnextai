@@ -140,13 +140,25 @@ async function signOut() {
     return { success: true };
 }
 
+// Schedule a check-in email (best-effort, silent)
+function _scheduleCheckinEmail(session, title, mediaType) {
+    const email = session?.user?.email;
+    if (!email) return;
+    const userName = session.user?.user_metadata?.full_name || '';
+    fetch('/api/schedule-checkin-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, title: title || 'your title', media_type: mediaType || 'movie', user_name: userName })
+    }).catch(() => {});
+}
+
 // Add to watchlist
 async function addToWatchlist(mediaId, mediaType, title, posterPath) {
     const session = await checkAuth();
     if (!session) {
         return { success: false, error: 'Not authenticated' };
     }
-    
+
     const { data, error } = await supabase
         .from('watchlist')
         .insert({
@@ -156,12 +168,15 @@ async function addToWatchlist(mediaId, mediaType, title, posterPath) {
             title: title,
             poster_path: posterPath
         });
-    
+
     if (error) {
         console.error('Add to watchlist error:', error);
         return { success: false, error: error.message };
     }
-    
+
+    // Schedule check-in reminder 1-5 hours after adding
+    _scheduleCheckinEmail(session, title, mediaType);
+
     return { success: true };
 }
 
@@ -213,22 +228,25 @@ async function markAsWatched(mediaId, mediaType, title, rating, posterPath) {
         return { success: false, error: 'Not authenticated' };
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from('watched')
-        .insert({
+        .upsert({
             user_id: session.user.id,
             media_id: mediaId,
             media_type: mediaType,
             title: title,
             poster_path: posterPath || null,
             rating: rating
-        });
-    
+        }, { onConflict: 'user_id,media_id,media_type' });
+
     if (error) {
         console.error('Mark as watched error:', error);
         return { success: false, error: error.message };
     }
-    
+
+    // Schedule check-in reminder 1-5 hours after adding
+    _scheduleCheckinEmail(session, title, mediaType);
+
     return { success: true };
 }
 

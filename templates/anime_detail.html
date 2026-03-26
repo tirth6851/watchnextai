@@ -43,9 +43,9 @@
         }
         .watching-modal-overlay.open { display: flex; }
         .watching-modal {
-            background: var(--card); border: 1px solid var(--border);
+            background: #131929; border: 1px solid rgba(148,163,184,0.35);
             border-radius: 1.2rem; padding: 2rem; width: min(380px, 92vw);
-            position: relative;
+            position: relative; box-shadow: 0 24px 64px rgba(0,0,0,.7);
         }
         .watching-modal h3 { margin: 0 0 1.2rem; font-size: 1.15rem; }
         .watching-modal-close {
@@ -307,6 +307,12 @@
                 btn.classList.add('active');
                 btn.textContent = rating ? `✓ Watched · ${'★'.repeat(rating)}` : '✓ Watched';
                 window.showToast(rating ? `Marked as watched! (${rating}/5)` : 'Marked as watched!');
+                const wlBtn = document.getElementById('watchlistBtn');
+                wlBtn.disabled = true; wlBtn.style.opacity = '.4';
+                wlBtn.title = 'You have already watched this';
+                const wgBtn = document.getElementById('watchingBtn');
+                wgBtn.disabled = true; wgBtn.style.opacity = '.4';
+                wgBtn.title = 'You have already watched this';
             } else { window.showToast(r.error || 'Error.', 'error'); }
         }
 
@@ -407,7 +413,43 @@
             c.appendChild(d); c.scrollTop = c.scrollHeight;
         }
 
+        async function loadUserStatus() {
+            const session = await checkAuth();
+            if (!session) return;
+            try {
+                const [wlRes, wgRes, wdRes] = await Promise.all([
+                    supabase.from('watchlist').select('id').eq('user_id', session.user.id).eq('media_id', animeId).eq('media_type', 'anime').maybeSingle(),
+                    supabase.from('watching').select('id,current_episode').eq('user_id', session.user.id).eq('media_id', animeId).eq('media_type', 'anime').maybeSingle(),
+                    supabase.from('watched').select('id,rating').eq('user_id', session.user.id).eq('media_id', animeId).eq('media_type', 'anime').maybeSingle()
+                ]);
+                if (wlRes.data) {
+                    inWatchlist = true;
+                    const btn = document.getElementById('watchlistBtn');
+                    btn.textContent = '✓ In Watchlist'; btn.classList.add('active');
+                }
+                if (wgRes.data) {
+                    inWatching = true;
+                    const btn = document.getElementById('watchingBtn');
+                    btn.classList.add('active');
+                    btn.textContent = `▶ Ep ${wgRes.data.current_episode}`;
+                }
+                if (wdRes.data) {
+                    const btn = document.getElementById('watchedBtn');
+                    const r = wdRes.data.rating;
+                    btn.classList.add('active');
+                    btn.textContent = r ? `✓ Watched · ${'★'.repeat(r)}` : '✓ Watched';
+                    const wlBtn = document.getElementById('watchlistBtn');
+                    wlBtn.disabled = true; wlBtn.style.opacity = '.4';
+                    wlBtn.title = 'You have already watched this';
+                    const wgBtn = document.getElementById('watchingBtn');
+                    wgBtn.disabled = true; wgBtn.style.opacity = '.4';
+                    wgBtn.title = 'You have already watched this';
+                }
+            } catch(e) { console.warn('loadUserStatus error', e); }
+        }
+
         loadAnimeDetails();
+        loadUserStatus();
     </script>
 </body>
 </html>

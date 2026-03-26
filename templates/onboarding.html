@@ -438,7 +438,15 @@
             document.getElementById('obDone').style.display      = 'block';
         }
 
-        function finishOnboarding() { window.location.href = '/'; }
+        async function finishOnboarding() {
+            // Mark account as onboarded so sign-in never redirects back here
+            try {
+                if (typeof supabase !== 'undefined' && supabase) {
+                    await supabase.auth.updateUser({ data: { onboarded: true } });
+                }
+            } catch(_) {}
+            window.location.href = '/';
+        }
 
         // ── Swipe support ─────────────────────────────────────────────────────
         function _setupSwipe() {

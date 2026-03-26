@@ -67,7 +67,11 @@ async function handleGoogleSignIn() {
       btn.disabled = false;
       btn.innerHTML = _googleBtnHTML;
     }
-    if (errEl) errEl.textContent = result.error || 'Google sign-in failed. Please try again.';
+    const rawError = result.error || '';
+    const friendlyError = (rawError.toLowerCase().includes('unsupported provider') || rawError.toLowerCase().includes('provider is not enabled'))
+      ? 'Google sign-in is not yet enabled. Please use email & password instead.'
+      : (rawError || 'Google sign-in failed. Please try again.');
+    if (errEl) errEl.textContent = friendlyError;
   }
   // On success the browser navigates away — nothing more to do here
 }
@@ -115,15 +119,29 @@ function _ensureExtraFields() {
     field.style.display = 'none';
     field.innerHTML = `
       <label for="authOtp" id="authOtpLabel">Verification Code</label>
-      <input type="text" id="authOtp" placeholder="000000" maxlength="6"
+      <input type="text" id="authOtp" placeholder="00000000" maxlength="8"
              autocomplete="one-time-code" inputmode="numeric"
              style="letter-spacing:.3em;font-size:1.35rem;text-align:center;padding:.55rem;"
-             oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);" />
+             oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8);" />
       <p id="authOtpHint" style="font-size:.78rem;color:var(--fg-muted,#94a3b8);margin:.45rem 0 0;line-height:1.4;"></p>
     `;
     const sc = document.getElementById('strengthContainer');
     if (sc) sc.insertAdjacentElement('afterend', field);
   }
+  // Terms & Conditions checkbox (signup only)
+  if (!document.getElementById('authTcField')) {
+    const tcField = document.createElement('div');
+    tcField.id = 'authTcField';
+    tcField.style.cssText = 'display:none;margin:.6rem 0 .4rem;font-size:.82rem;color:var(--fg-muted,#94a3b8);';
+    tcField.innerHTML = `
+      <label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;">
+        <input type="checkbox" id="authTcCheck" style="margin-top:.15rem;accent-color:var(--accent,#6366f1);" />
+        <span>I agree to the <a href="/terms" target="_blank" style="color:var(--accent,#6366f1);text-decoration:underline;">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" style="color:var(--accent,#6366f1);text-decoration:underline;">Privacy Policy</a></span>
+      </label>`;
+    const submitBtn = document.getElementById('authSubmit');
+    if (submitBtn) submitBtn.insertAdjacentElement('beforebegin', tcField);
+  }
+
   // Forgot password link
   if (!document.getElementById('authForgotLink')) {
     const link = document.createElement('button');
@@ -154,6 +172,12 @@ function _applyAuthMode(mode) {
   // Google section visible only on signin/signup
   const gs = el('authGoogleSection');
   if (gs) gs.style.display = (mode === 'signin' || mode === 'signup') ? '' : 'none';
+
+  // T&C checkbox visible only on signup
+  const tcField = el('authTcField');
+  if (tcField) tcField.style.display = (mode === 'signup') ? '' : 'none';
+  const tcCheck = el('authTcCheck');
+  if (tcCheck && mode !== 'signup') tcCheck.checked = false;
 
   text('authError', '');
 
@@ -218,8 +242,8 @@ function _applyAuthMode(mode) {
       text('authOtpLabel', _otpType === 'signup' ? 'Verification Code' : 'Reset Code');
       text('authOtpHint',
         _otpType === 'signup'
-          ? `We sent a 6-digit code to ${_otpEmail}. Enter it to activate your account.`
-          : `We sent a 6-digit reset code to ${_otpEmail}.`
+          ? `We sent a verification code to ${_otpEmail}. Enter it to activate your account.`
+          : `We sent a reset code to ${_otpEmail}.`
       );
       if (toggleRow) toggleRow.style.display = '';
       text('authToggleText', 'Wrong email?');
@@ -365,6 +389,9 @@ async function _handleSignInOrUp() {
   if (_authMode === 'signup' && password.length < 8) {
     if (errEl) errEl.textContent = 'Password must be at least 8 characters.'; return;
   }
+  if (_authMode === 'signup' && !document.getElementById('authTcCheck')?.checked) {
+    if (errEl) errEl.textContent = 'Please agree to the Terms & Conditions to continue.'; return;
+  }
 
   _setLoading(true);
   try {
@@ -373,7 +400,7 @@ async function _handleSignInOrUp() {
       if (!result.success) { if (errEl) errEl.textContent = result.error; return; }
       fetch('/api/send-welcome-email', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, agreed_at: new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC' })
       }).catch(() => {});
       if (result.session) {
         // Email confirmation OFF — immediately signed in
@@ -435,7 +462,7 @@ async function _handleOtp() {
   const code  = (document.getElementById('authOtp')?.value || '').trim();
   const errEl = document.getElementById('authError');
   if (errEl) errEl.textContent = '';
-  if (code.length !== 6) { if (errEl) errEl.textContent = 'Please enter the full 6-digit code.'; return; }
+  if (code.length < 6 || code.length > 8) { if (errEl) errEl.textContent = 'Please enter the full verification code (6–8 digits).'; return; }
   _setLoading(true);
   try {
     const result = await verifyOtp(_otpEmail, code, _otpType);
@@ -473,7 +500,7 @@ async function _handleMfa() {
   const code  = (document.getElementById('authOtp')?.value || '').trim();
   const errEl = document.getElementById('authError');
   if (errEl) errEl.textContent = '';
-  if (code.length !== 6) { if (errEl) errEl.textContent = 'Please enter your 6-digit authenticator code.'; return; }
+  if (code.length < 6) { if (errEl) errEl.textContent = 'Please enter your 6-digit authenticator code.'; return; }
   _setLoading(true);
   try {
     const result = await mfaVerify(_mfaFactorId, _mfaChallengeId, code);
