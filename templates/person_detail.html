@@ -159,7 +159,7 @@
                                 ? `https://image.tmdb.org/t/p/w185${c.poster_path}`
                                 : 'https://via.placeholder.com/115x172?text=No+Image';
                             const title = c.title || c.name || 'Untitled';
-                            const year = (c.release_date || '').slice(0,4);
+                            const year = (c.release_date || c.first_air_date || '').slice(0,4);
                             const role = c.character || c.job || '';
                             const rating = c.vote_average && c.vote_average > 0 && c.vote_count > 10
                                 ? `<span class="person-card-rating">⭐ ${c.vote_average.toFixed(1)}</span>` : '';

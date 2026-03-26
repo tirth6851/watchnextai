@@ -485,7 +485,8 @@
             const username = session.user?.user_metadata?.full_name || session.user?.email?.split('@')[0] || 'Anonymous';
             try {
                 const res = await fetch('/api/comments', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
                     body: JSON.stringify({ content, media_id: movieId, media_type: 'movie', user_id: session.user.id, username })
                 });
                 const data = await res.json();
