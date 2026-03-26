@@ -1533,3 +1533,7 @@ html[data-theme="light"] .dynamic-bg {
 .person-card:hover img { transform: scale(1.04); }
 .person-card-title { font-size: .73rem; font-weight: 600; margin: .35rem 0 .15rem; }
 .person-card-sub { font-size: .67rem; color: var(--fg-muted); }
+
+/* ===== Cast popularity + person card rating ===== */
+.cast-pop { display: block; font-size: .62rem; color: var(--fg-muted); margin-top: .15rem; }
+.person-card-rating { color: #f59e0b; font-size: .65rem; font-weight: 700; }

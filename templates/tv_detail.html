@@ -415,7 +415,8 @@
                     const el = document.createElement('a');
                     el.className = 'cast-card';
                     el.href = m.id ? `/person/${m.id}` : '#';
-                    el.innerHTML = `<img class="cast-avatar" src="${img}" alt="${m.name||''}" loading="lazy"><p class="cast-name">${m.name||''}</p><p class="cast-character">${m.character||''}</p>`;
+                    const pop = m.popularity >= 5 ? `<span class="cast-pop">🔥 ${Math.round(m.popularity)}</span>` : '';
+                    el.innerHTML = `<img class="cast-avatar" src="${img}" alt="${m.name||''}" loading="lazy"><p class="cast-name">${m.name||''}</p><p class="cast-character">${m.character||''}</p>${pop}`;
                     grid.appendChild(el);
                 });
                 document.getElementById('castSection').style.display = 'block';
