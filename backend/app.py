@@ -746,11 +746,14 @@ def get_person_credits(person_id):
     data, err = tmdb_get(f"/person/{person_id}/combined_credits")
     if err:
         return jsonify({"error": err}), 502
-    cast = sorted(
-        [c for c in (data or {}).get("cast", []) if c.get("poster_path")],
-        key=lambda x: x.get("popularity", 0),
-        reverse=True
-    )[:24]
+    # Only keep real movies/TV, with a poster and enough votes to confirm authenticity
+    raw = [
+        c for c in (data or {}).get("cast", [])
+        if c.get("poster_path")
+        and c.get("media_type") in ("movie", "tv")
+        and c.get("vote_count", 0) >= 10
+    ]
+    cast = sorted(raw, key=lambda x: x.get("popularity", 0), reverse=True)[:48]
     trimmed = [
         {
             "id": c.get("id"),
