@@ -33,12 +33,27 @@ SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY",
     "4cCI6MjA4NjUyNTM0N30.OzS9coMZ3YJc9lumZWrIo5aQS2zT0YHHu3I1rKDoioI"
 )
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+SUPPORTED_COMMENT_MEDIA_TYPES = {"movie", "tv", "anime"}
 
 # Initialize Groq client
 if GROQ_API_KEY:
     groq_client = Groq(api_key=GROQ_API_KEY)
 else:
     groq_client = None
+
+if not TMDB_API_KEY:
+    app.logger.warning("TMDB_API_KEY is not configured. TMDB-backed routes will fail until it is set.")
+
+_TMDB_ROUTE_PREFIXES = (
+    "/api/movies", "/api/tv_shows", "/api/movie/", "/api/tv/",
+    "/api/person/", "/api/genres", "/api/autocomplete",
+    "/api/search", "/api/recommendations",
+)
+
+@app.before_request
+def guard_tmdb_key():
+    if not TMDB_API_KEY and request.path.startswith(_TMDB_ROUTE_PREFIXES):
+        return jsonify({"error": "TMDB_API_KEY is not configured on this server."}), 503
 
 MOVIE_ENDPOINTS = {
     "trending": "/trending/movie/week",
@@ -193,7 +208,9 @@ def chat():
         return jsonify({"error": "Chatbot service not available. GROQ_API_KEY not configured."}), 503
     
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON body."}), 400
         movie_title = data.get("movie_title", "")
         movie_overview = data.get("movie_overview", "")
         user_message = data.get("message", "")
@@ -426,8 +443,10 @@ def get_recommendations():
 
     if media_type not in ("movie", "tv"):
         return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
+    if not TMDB_API_KEY:
+        return jsonify({"results": [], "error": "Missing TMDB_API_KEY."}), 503
 
-    from recommender import recommend_for_user, recommend_content_based
+    from backend.recommender import recommend_for_user, recommend_content_based
 
     supa_url = os.getenv("SUPABASE_URL", "https://lqlqurgthkdknxwwgygx.supabase.co")
     supa_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
@@ -469,7 +488,8 @@ def autocomplete():
 
     data, err = tmdb_get("/search/multi", query=query, include_adult="false", page=1)
     if err:
-        return jsonify({"results": []})
+        app.logger.warning("Autocomplete TMDB lookup failed for query %r: %s", query, err)
+        return jsonify({"results": [], "error": err})
 
     results = []
     for item in (data or {}).get("results", [])[:10]:
@@ -822,6 +842,8 @@ def get_comments():
     media_type = request.args.get("media_type", "movie")
     if not media_id:
         return jsonify({"results": []}), 400
+    if media_type not in SUPPORTED_COMMENT_MEDIA_TYPES:
+        return jsonify({"results": [], "error": "media_type must be movie, tv, or anime"}), 400
     # Read directly from Supabase REST (SELECT is allowed for all via RLS)
     import urllib.parse
     params = urllib.parse.urlencode({
@@ -848,10 +870,12 @@ def post_comment():
     data = request.get_json(silent=True) or {}
     content    = (data.get("content") or "").strip()
     media_id   = data.get("media_id")
-    media_type = data.get("media_type", "movie")
+    media_type = (data.get("media_type") or "movie").strip()
     user_id    = data.get("user_id")
     username   = (data.get("username") or "Anonymous").strip()[:40]
 
+    if media_type not in SUPPORTED_COMMENT_MEDIA_TYPES:
+        return jsonify({"error": "media_type must be movie, tv, or anime"}), 400
     if not content or not media_id or not user_id:
         return jsonify({"error": "Missing required fields"}), 400
     if len(content) > 1000:
