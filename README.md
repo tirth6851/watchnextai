@@ -73,7 +73,25 @@ Open [http://localhost:5000](http://localhost:5000).
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Deploy to Vercel
+
+1. Push the repo to GitHub
+2. Import into [vercel.com](https://vercel.com) — it auto-detects `vercel.json`
+3. Add these environment variables in the Vercel dashboard:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TMDB_API_KEY` | ✅ Yes | [themoviedb.org](https://www.themoviedb.org/settings/api) |
+| `GROQ_API_KEY` | ✅ Yes | [console.groq.com](https://console.groq.com) |
+| `SUPABASE_URL` | Optional | Defaults to shared instance |
+| `SUPABASE_ANON_KEY` | Optional | Defaults to shared instance |
+| `SMTP_USER` / `SMTP_PASS` | Optional | For welcome/check-in emails |
+
+4. Deploy — Vercel builds and serves automatically on every push to `main`
+
+---
+
+## 🌐 Live Demo
 
 [watchnextai-orpin.vercel.app](https://watchnextai-orpin.vercel.app)
 
