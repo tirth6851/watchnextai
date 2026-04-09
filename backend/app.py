@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import os
+import re
 import smtplib
 import threading
 import random
@@ -10,6 +11,8 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from groq import Groq
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env"
@@ -21,6 +24,22 @@ app = Flask(
     static_folder=str(ROOT / "static"),
     static_url_path="/static",
 )
+
+# Reject request bodies larger than 512 KB
+app.config["MAX_CONTENT_LENGTH"] = 512 * 1024
+
+# Rate limiter — in-memory per process (adequate for single-instance / Vercel)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["300 per hour"],
+    storage_uri="memory://",
+)
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+)
+_EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{1,63}$")
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
@@ -55,6 +74,25 @@ def guard_tmdb_key():
     if not TMDB_API_KEY and request.path.startswith(_TMDB_ROUTE_PREFIXES):
         return jsonify({"error": "TMDB_API_KEY is not configured on this server."}), 503
 
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
+
+@app.errorhandler(413)
+def too_large(_):
+    return jsonify({"error": "Request body too large (max 512 KB)."}), 413
+
+
+@app.errorhandler(429)
+def rate_limited(_):
+    return jsonify({"error": "Too many requests. Please slow down."}), 429
+
 MOVIE_ENDPOINTS = {
     "trending": "/trending/movie/week",
     "popular": "/movie/popular",
@@ -88,8 +126,8 @@ def tmdb_get(path: str, **params):
         return response.json(), None
     except requests.exceptions.Timeout:
         return None, "Request timed out."
-    except requests.exceptions.RequestException as e:
-        return None, str(e)
+    except requests.exceptions.RequestException:
+        return None, "Upstream service unavailable."
 
 
 @app.route("/")
@@ -203,20 +241,23 @@ def get_movie_trailer(movie_id):
 
 
 @app.route("/api/chat", methods=["POST"])
+@limiter.limit("20 per hour")
 def chat():
     if not groq_client:
         return jsonify({"error": "Chatbot service not available. GROQ_API_KEY not configured."}), 503
-    
+
     try:
         data = request.get_json(silent=True) or {}
         if not isinstance(data, dict):
             return jsonify({"error": "Invalid JSON body."}), 400
-        movie_title = data.get("movie_title", "")
-        movie_overview = data.get("movie_overview", "")
-        user_message = data.get("message", "")
-        
+        movie_title    = str(data.get("movie_title", ""))[:200]
+        movie_overview = str(data.get("movie_overview", ""))[:1000]
+        user_message   = str(data.get("message", "")).strip()
+
         if not user_message:
             return jsonify({"error": "No message provided."}), 400
+        if len(user_message) > 500:
+            return jsonify({"error": "Message too long (max 500 characters)."}), 400
         
         # Create context-aware prompt
         system_prompt = f"""You are a friendly movie discussion assistant. You're currently discussing the movie '{movie_title}'. 
@@ -247,14 +288,14 @@ Keep responses concise (2-3 paragraphs max) and friendly."""
         
         return jsonify({"response": response_text})
         
-    except Exception as e:
-        return jsonify({"error": f"Chat error: {str(e)}"}), 500
+    except Exception:
+        return jsonify({"error": "Chat service unavailable. Please try again later."}), 500
 
 
 @app.route("/health")
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok", "tmdb_key_present": bool(TMDB_API_KEY)})
+    return jsonify({"status": "ok"})
 
 
 # TV Shows routes
@@ -380,8 +421,8 @@ def get_anime():
         data = response.json()
         return jsonify({"anime": data.get("data", [])})
         
-    except requests.exceptions.RequestException as e:
-        return jsonify({"anime": [], "error": str(e)}), 502
+    except requests.exceptions.RequestException:
+        return jsonify({"anime": [], "error": "Upstream service unavailable."}), 502
 
 @app.route("/api/movie/<int:movie_id>/watch-providers")
 def get_movie_watch_providers(movie_id):
@@ -410,8 +451,8 @@ def get_anime_details(anime_id):
         )
         response.raise_for_status()
         return jsonify(response.json().get("data", {}))
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 502
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Upstream service unavailable."}), 502
 
 @app.route("/api/anime/<int:anime_id>/recommendations")
 def get_anime_recommendations(anime_id):
@@ -427,19 +468,24 @@ def get_anime_recommendations(anime_id):
             if i.get("entry")
         ]
         return jsonify({"results": recs})
-    except requests.exceptions.RequestException as e:
-        return jsonify({"results": [], "error": str(e)}), 502
+    except requests.exceptions.RequestException:
+        return jsonify({"results": [], "error": "Upstream service unavailable."}), 502
 
 
 @app.route("/api/recommendations")
+@limiter.limit("60 per hour")
 def get_recommendations():
     media_type = request.args.get("media_type", "movie")
     media_id   = request.args.get("media_id",   type=int)
     user_id    = request.args.get("user_id",    "").strip()
-    page       = request.args.get("page",       1, type=int)
+    page       = max(1, min(request.args.get("page", 1, type=int) or 1, 100))
 
     if not media_id and not user_id:
         return jsonify({"results": [], "error": "media_id or user_id required"}), 400
+    if user_id and not _UUID_RE.match(user_id):
+        return jsonify({"results": [], "error": "Invalid user_id format."}), 400
+    if media_id and (media_id < 1 or media_id > 10_000_000):
+        return jsonify({"results": [], "error": "Invalid media_id."}), 400
 
     if media_type not in ("movie", "tv"):
         return jsonify({"results": [], "error": "media_type must be movie or tv"}), 400
@@ -481,10 +527,13 @@ def get_genres():
 
 
 @app.route("/api/autocomplete")
+@limiter.limit("60 per minute")
 def autocomplete():
     query = request.args.get("query", "").strip()
     if not query or len(query) < 2:
         return jsonify({"results": []})
+    if len(query) > 200:
+        return jsonify({"results": [], "error": "Query too long."}), 400
 
     data, err = tmdb_get("/search/multi", query=query, include_adult="false", page=1)
     if err:
@@ -518,12 +567,15 @@ def autocomplete():
 
 
 @app.route("/api/search")
+@limiter.limit("30 per minute")
 def global_search():
     query = request.args.get("query", "").strip()
-    page = request.args.get("page", 1, type=int)
+    page = max(1, min(request.args.get("page", 1, type=int) or 1, 500))
 
     if not query:
         return jsonify({"results": [], "error": "No query provided."}), 400
+    if len(query) > 200:
+        return jsonify({"results": [], "error": "Query too long."}), 400
 
     results = []
 
@@ -569,6 +621,7 @@ def global_search():
 
 
 @app.route('/api/send-welcome-email', methods=['POST'])
+@limiter.limit("5 per 15 minutes")
 def send_welcome_email():
     smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
@@ -580,9 +633,9 @@ def send_welcome_email():
         return jsonify({'success': True, 'note': 'Email service not configured'})
 
     data = request.get_json(silent=True) or {}
-    to_email = data.get('email', '').strip()
-    if not to_email:
-        return jsonify({'error': 'No email provided'}), 400
+    to_email = data.get('email', '').strip()[:254]
+    if not to_email or not _EMAIL_RE.match(to_email):
+        return jsonify({'error': 'Invalid email address'}), 400
 
     from datetime import datetime, timezone
     agreed_at = data.get('agreed_at') or datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
@@ -645,8 +698,8 @@ def send_welcome_email():
             server.sendmail(smtp_user, to_email, msg.as_string())
 
         return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception:
+        return jsonify({'success': False, 'error': 'Failed to send email. Please try again.'}), 500
 
 
 @app.route('/profile')
@@ -722,6 +775,7 @@ def _send_checkin_email(to_email, title, media_type, user_name):
 
 
 @app.route('/api/schedule-checkin-email', methods=['POST'])
+@limiter.limit("5 per 15 minutes")
 def schedule_checkin_email():
     smtp_user = os.getenv('SMTP_USER')
     smtp_pass = os.getenv('SMTP_PASS')
@@ -729,13 +783,15 @@ def schedule_checkin_email():
         return jsonify({'success': True, 'note': 'Email service not configured'})
 
     data = request.get_json(silent=True) or {}
-    to_email  = data.get('email', '').strip()
-    title     = data.get('title', 'your title').strip()
-    media_type = data.get('media_type', 'movie').strip()
-    user_name = data.get('user_name', '').strip()
+    to_email   = data.get('email', '').strip()[:254]
+    title      = str(data.get('title', 'your title')).strip()[:200]
+    media_type = str(data.get('media_type', 'movie')).strip()
+    user_name  = str(data.get('user_name', '')).strip()[:100]
 
-    if not to_email:
-        return jsonify({'error': 'No email provided'}), 400
+    if not to_email or not _EMAIL_RE.match(to_email):
+        return jsonify({'error': 'Invalid email address'}), 400
+    if media_type not in SUPPORTED_COMMENT_MEDIA_TYPES:
+        media_type = 'movie'
 
     # Schedule send 1–5 hours from now (in seconds)
     delay_seconds = random.randint(3600, 18000)
@@ -851,7 +907,7 @@ def get_comments():
         "media_type": f"eq.{media_type}",
         "order":      "created_at.desc",
         "limit":      "50",
-        "select":     "id,username,content,created_at,user_id",
+        "select":     "id,username,content,created_at",
     })
     try:
         resp = requests.get(
@@ -861,11 +917,12 @@ def get_comments():
         )
         resp.raise_for_status()
         return jsonify({"results": resp.json()})
-    except Exception as e:
-        return jsonify({"results": [], "error": str(e)}), 502
+    except Exception:
+        return jsonify({"results": [], "error": "Could not load comments."}), 502
 
 
 @app.route("/api/comments", methods=["POST"])
+@limiter.limit("10 per 15 minutes")
 def post_comment():
     data = request.get_json(silent=True) or {}
     content    = (data.get("content") or "").strip()
@@ -876,6 +933,15 @@ def post_comment():
 
     if media_type not in SUPPORTED_COMMENT_MEDIA_TYPES:
         return jsonify({"error": "media_type must be movie, tv, or anime"}), 400
+    if media_id is not None:
+        try:
+            media_id = int(media_id)
+            if media_id < 1 or media_id > 10_000_000:
+                raise ValueError
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid media_id."}), 400
+    if user_id and not _UUID_RE.match(str(user_id)):
+        return jsonify({"error": "Invalid user_id format."}), 400
     if not content or not media_id or not user_id:
         return jsonify({"error": "Missing required fields"}), 400
     if len(content) > 1000:
@@ -903,8 +969,8 @@ def post_comment():
         )
         resp.raise_for_status()
         return jsonify({"success": True, "comment": resp.json()[0] if resp.json() else {}})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 502
+    except Exception:
+        return jsonify({"error": "Could not save comment. Please try again."}), 502
 
 
 if __name__ == "__main__":
