@@ -532,6 +532,36 @@ a {
 .footer-links span {
   color: var(--muted);
 }
+/* ─── Tap targets (>= 44px) and visible keyboard focus ───────────── */
+.pill-btn,
+.icon-btn,
+.nav-link,
+.content-type-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.search {
+  min-height: 48px;           /* 44px Search button + 2px padding + 1px border each side */
+  padding: 2px 2px 2px 14px;
+}
+.search input { min-height: 44px; }
+.search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.pill-btn:focus-visible,
+.icon-btn:focus-visible,
+.nav-link:focus-visible,
+.content-type-btn:focus-visible,
+.nav-brand-link:focus-visible,
+.home-card:focus-visible,
+.card-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* ─── Discover navbar, desktop (>= 901px) ───────────
    Row 1: brand | search | theme/auth controls.
    Row 2: content-type tabs + category links.
