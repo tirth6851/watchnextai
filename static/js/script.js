@@ -351,13 +351,13 @@ function renderMixedCard(item) {
 
 // ---- Fetch functions ----
 
-async function fetchMovies(page) {
+async function fetchMovies(page, signal) {
   const category = state.currentQuery ? "search" : state.currentCategory;
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
   if (state.currentGenreId && !state.currentQuery) params.set("genre_id", String(state.currentGenreId));
 
-  const response = await fetch(`/api/movies?${params.toString()}`);
+  const response = await fetch(`/api/movies?${params.toString()}`, { signal });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -365,13 +365,13 @@ async function fetchMovies(page) {
   return response.json();
 }
 
-async function fetchTvShows(page) {
+async function fetchTvShows(page, signal) {
   const category = state.currentQuery ? "search" : state.currentCategory;
   const params = new URLSearchParams({ page: String(page), category });
   if (state.currentQuery) params.set("query", state.currentQuery);
   if (state.currentGenreId && !state.currentQuery) params.set("genre_id", String(state.currentGenreId));
 
-  const response = await fetch(`/api/tv_shows?${params.toString()}`);
+  const response = await fetch(`/api/tv_shows?${params.toString()}`, { signal });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -379,9 +379,9 @@ async function fetchTvShows(page) {
   return response.json();
 }
 
-async function fetchGlobalSearch(page) {
+async function fetchGlobalSearch(page, signal) {
   const params = new URLSearchParams({ query: state.currentQuery, page: String(page) });
-  const response = await fetch(`/api/search?${params.toString()}`);
+  const response = await fetch(`/api/search?${params.toString()}`, { signal });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -389,7 +389,7 @@ async function fetchGlobalSearch(page) {
   return response.json();
 }
 
-async function fetchAnime(page) {
+async function fetchAnime(page, signal) {
   const params = new URLSearchParams({ page: String(page) });
   if (state.currentQuery) {
     params.set("category", "search");
@@ -398,7 +398,7 @@ async function fetchAnime(page) {
     params.set("category", "top");
   }
 
-  const response = await fetch(`/api/anime?${params.toString()}`);
+  const response = await fetch(`/api/anime?${params.toString()}`, { signal });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -408,9 +408,23 @@ async function fetchAnime(page) {
 
 // ---- Main load function ----
 
+// Each replacing load (new search, tab, category) bumps loadGeneration and aborts the
+// request that is still in flight, so a new search is never dropped because an older
+// load has not finished. Responses from superseded loads are ignored.
+let loadGeneration = 0;
+let activeLoadController = null;
+
 async function loadContent({ page, replace = false } = {}) {
-  if (!container || state.isLoading) return;
-  if (!state.hasMore && !replace) return;
+  if (!container) return;
+  // Appending the next page (infinite scroll) must not overlap another load.
+  if (!replace && (state.isLoading || !state.hasMore)) return;
+
+  if (activeLoadController) activeLoadController.abort();
+  const controller = new AbortController();
+  const { signal } = controller;
+  activeLoadController = controller;
+  const generation = ++loadGeneration;
+  const isStale = () => generation !== loadGeneration;
 
   state.isLoading = true;
   if (loading) loading.style.display = "block";
@@ -419,7 +433,8 @@ async function loadContent({ page, replace = false } = {}) {
     let items = [];
 
     if (state.isGlobalSearch) {
-      const data = await fetchGlobalSearch(page);
+      const data = await fetchGlobalSearch(page, signal);
+      if (isStale()) return;
       items = data.results || [];
       if (replace) container.innerHTML = "";
       if (!items.length) {
@@ -433,7 +448,8 @@ async function loadContent({ page, replace = false } = {}) {
         if (loading) loading.style.display = "none";
       }
     } else if (state.currentContentType === "movies") {
-      const data = await fetchMovies(page);
+      const data = await fetchMovies(page, signal);
+      if (isStale()) return;
       items = data.movies || [];
       if (replace) container.innerHTML = "";
       if (!items.length) {
@@ -444,7 +460,8 @@ async function loadContent({ page, replace = false } = {}) {
         if (loading) loading.style.display = "none";
       }
     } else if (state.currentContentType === "tv") {
-      const data = await fetchTvShows(page);
+      const data = await fetchTvShows(page, signal);
+      if (isStale()) return;
       items = data.shows || [];
       if (replace) container.innerHTML = "";
       if (!items.length) {
@@ -455,7 +472,8 @@ async function loadContent({ page, replace = false } = {}) {
         if (loading) loading.style.display = "none";
       }
     } else {
-      const data = await fetchAnime(page);
+      const data = await fetchAnime(page, signal);
+      if (isStale()) return;
       items = data.anime || [];
       if (replace) container.innerHTML = "";
       if (!items.length) {
@@ -470,11 +488,19 @@ async function loadContent({ page, replace = false } = {}) {
     state.page = page;
     applyClientFilter(searchInput?.value || "");
   } catch (error) {
+    // A superseded or aborted load must not touch the UI or state of the newer one.
+    if (error.name === "AbortError" || isStale()) return;
     state.hasMore = false;
-    if (loading) loading.style.display = "none";
+    if (loading) {
+      loading.textContent = "Could not load content. Please try again.";
+      loading.style.display = "block";
+    }
     showToast(error.message || "Could not load content.", "error");
   } finally {
-    state.isLoading = false;
+    if (!isStale()) {
+      state.isLoading = false;
+      activeLoadController = null;
+    }
   }
 }
 
