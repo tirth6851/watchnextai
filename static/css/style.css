@@ -532,6 +532,58 @@ a {
 .footer-links span {
   color: var(--muted);
 }
+/* ─── Discover navbar, desktop (>= 901px) ───────────
+   Row 1: brand | search | theme/auth controls.
+   Row 2: content-type tabs + category links.
+   A flex row let the tab groups claim the width and squeezed .nav-search to 0px,
+   so its Search button overflowed and painted over the Dark toggle. */
+.nav-subrow { display: contents; } /* transparent wrapper below 901px */
+
+@media (min-width: 901px) {
+  .navbar--discover {
+    display: grid;
+    grid-template-columns: auto minmax(220px, 1fr) auto;
+    grid-template-areas:
+      "brand search controls"
+      "sub   sub    sub";
+    align-items: center;
+    gap: 10px 18px;
+  }
+  .navbar--discover .nav-brand    { grid-area: brand; min-width: 0; }
+  .navbar--discover .nav-search   { grid-area: search; }
+  .navbar--discover .nav-controls { grid-area: controls; justify-self: end; }
+  .navbar--discover .nav-subrow {
+    grid-area: sub;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap; /* category links drop to their own line instead of overlapping the tabs */
+    gap: 8px 16px;
+    min-width: 0;
+  }
+  .navbar--discover .nav-subrow .content-type-tabs {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+  .navbar--discover .nav-subrow .nav-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+}
+
+/* Narrow phones: let the brand shrink (ellipsis) instead of running under the
+   theme/auth controls, and drop the "Hi, name" greeting that has no room. */
+.brand-text { min-width: 0; }
+@media (max-width: 768px) {
+  .nav-brand-link { min-width: 0; }
+  .brand-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-brand { min-width: 0; }
+}
+@media (max-width: 600px) {
+  .auth-greeting { display: none !important; }
+}
+
 /* ─── 900px (small tablet / large phone landscape) ── */
 @media (max-width: 900px) {
   /* Detail pages: keep brand + actions on one row */
