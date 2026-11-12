@@ -74,6 +74,34 @@ class AppSmokeTests(unittest.TestCase):
             {"results": [], "error": "Missing TMDB_API_KEY."},
         )
 
+    def test_global_search_survives_jikan_outage_quickly(self):
+        import time
+        import requests as requests_lib
+
+        movie_payload = {"results": [{"id": 1, "title": "Dune", "vote_count": 100, "popularity": 50}]}
+
+        def fake_tmdb_get(path, **params):
+            if path == "/search/movie":
+                return movie_payload, None
+            return {"results": []}, None
+
+        with patch("backend.app.TMDB_API_KEY", "tmdb-test"):
+            with patch("backend.app.tmdb_get", side_effect=fake_tmdb_get):
+                with patch(
+                    "backend.app.requests.get",
+                    side_effect=requests_lib.exceptions.ConnectTimeout("jikan down"),
+                ) as mock_get:
+                    started = time.monotonic()
+                    response = self.client.get("/api/search?query=dune")
+                    elapsed = time.monotonic() - started
+
+        self.assertEqual(response.status_code, 200)
+        results = response.get_json()["results"]
+        self.assertEqual([r["media_type"] for r in results], ["movie"])
+        self.assertLess(elapsed, 2)
+        # The anime lookup must use a short (connect, read) timeout, not REQUEST_TIMEOUT.
+        self.assertEqual(mock_get.call_args.kwargs["timeout"], (3, 4))
+
 
 if __name__ == "__main__":
     unittest.main()

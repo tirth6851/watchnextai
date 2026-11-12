@@ -44,6 +44,10 @@ _EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{1,63}$")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 REQUEST_TIMEOUT = 10
+# Anime is a best-effort extra in the combined /api/search. Jikan is often slow or
+# unreachable, and the search must not wait the full REQUEST_TIMEOUT for it:
+# (connect, read) seconds.
+JIKAN_SEARCH_TIMEOUT = (3, 4)
 # Public anon key — safe to hardcode (already in JS frontend)
 SUPABASE_URL  = os.getenv("SUPABASE_URL",  "https://lqlqurgthkdknxwwgygx.supabase.co")
 SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY",
@@ -601,7 +605,7 @@ def global_search():
             resp = requests.get(
                 f"{JIKAN_BASE_URL}/anime",
                 params={"q": query, "page": page},
-                timeout=REQUEST_TIMEOUT,
+                timeout=JIKAN_SEARCH_TIMEOUT,
             )
             resp.raise_for_status()
             items = []
