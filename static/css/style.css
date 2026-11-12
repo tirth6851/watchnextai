@@ -584,6 +584,27 @@ a {
   .auth-greeting { display: none !important; }
 }
 
+/* ─── Home navbar (<= 1100px) ────────────────────────
+   Brand + controls on row 1, scrollable Home/Movies/TV/Anime links on row 2.
+   A single flex row squeezed the brand text into a sliver and clipped the links. */
+@media (max-width: 1100px) {
+  .navbar--home {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand controls"
+      "links links";
+    gap: 8px 10px;
+    padding: 12px 16px;
+    align-items: center;
+  }
+  .navbar--home .nav-brand    { grid-area: brand; min-width: 0; }
+  .navbar--home .nav-tabs     { grid-area: links; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+  .navbar--home .nav-controls { grid-area: controls; gap: 6px; }
+  .navbar--home .brand-subtitle { display: none; }
+  .navbar--home .nav-controls .pill-btn { padding: 6px 10px; font-size: 0.8rem; }
+}
+
 /* ─── 900px (small tablet / large phone landscape) ── */
 @media (max-width: 900px) {
   /* Detail pages: keep brand + actions on one row */
