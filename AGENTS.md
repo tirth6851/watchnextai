@@ -29,7 +29,9 @@ Follow existing style in each layer. Python uses PEP 8 style with 4-space indent
 Prefer small helper functions over adding more inline logic to long route handlers. Reuse existing naming patterns like `*_detail.html`, `/api/<type>/<id>`, and `tmdb_get(...)`.
 
 ## Testing Guidelines
-There is currently no automated test suite or lint configuration in this repository. For changes, verify manually by running `flask run` and exercising the affected page or API route locally.
+A small smoke suite lives in `tests/test_app_smoke.py` (run `python -m unittest discover -s tests`; it needs no API keys). There is no lint configuration. For UI changes also verify manually by running `flask run` and exercising the affected page or API route locally.
+
+Read `HANDOFF.md` at the start of a session for the current state, unpushed commits, verification gaps and next steps.
 
 When adding tests later, place them under `tests/` and use filenames like `test_recommender.py`. Focus first on API behavior, recommendation scoring, and auth-sensitive flows.
 

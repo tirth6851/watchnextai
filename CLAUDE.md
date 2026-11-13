@@ -21,7 +21,9 @@ FLASK_DEBUG=1 flask run
 # Optional (Supabase has hardcoded fallbacks): SUPABASE_URL, SUPABASE_ANON_KEY
 ```
 
-No build step, no tests, no lint tools configured. Deployment is via Vercel (push to main → automatic deploy).
+No build step or lint tools. Smoke tests exist: `python -m unittest discover -s tests` (they patch the TMDB key and upstream calls, so no keys are needed). Deployment is via Vercel (push to main → automatic deploy).
+
+**Session handoff:** read `HANDOFF.md` first. It lists unpushed commits, root causes of the header-overlap and search-hang bugs, what was and was not verified, and next steps.
 
 ## Architecture
 
