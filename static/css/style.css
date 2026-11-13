@@ -551,6 +551,14 @@ a {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent);
 }
+/* The tab strips scroll horizontally (overflow-x:auto also clips vertically), so give the
+   focus ring room inside them instead of letting it be cut off at the strip edge. */
+.nav-tabs,
+.content-type-tabs { padding: 4px; }
+.home-hero__search:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 .pill-btn:focus-visible,
 .icon-btn:focus-visible,
 .nav-link:focus-visible,
