@@ -490,7 +490,9 @@ async function loadContent({ page, replace = false } = {}) {
     }
 
     state.page = page;
-    applyClientFilter(searchInput?.value || "");
+    // Server-side search results are already filtered; the client-side title filter would
+    // hide matches whose title does not contain the typed text (e.g. "Spider-Man").
+    applyClientFilter(state.isGlobalSearch ? "" : searchInput?.value || "");
   } catch (error) {
     // A superseded or aborted load must not touch the UI or state of the newer one.
     if (error.name === "AbortError" || isStale()) return;
@@ -537,6 +539,7 @@ function applyClientFilter(query) {
 }
 
 function handleSearchInput(event) {
+  if (state.isGlobalSearch) return; // typing a new query must not hide the current results
   applyClientFilter(event.target.value || "");
 }
 
