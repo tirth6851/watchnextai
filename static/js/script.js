@@ -439,7 +439,11 @@ async function loadContent({ page, replace = false } = {}) {
       if (replace) container.innerHTML = "";
       if (!items.length) {
         state.hasMore = false;
-        if (loading) loading.textContent = "No results found.";
+        if (loading) {
+          loading.textContent = replace
+            ? `No results found for "${state.currentQuery}". Check the spelling or try another title.`
+            : "No more results.";
+        }
       } else {
         items.forEach((item) => {
           const card = renderMixedCard(item);
@@ -510,8 +514,13 @@ function loadMovies(opts) { return loadContent(opts); }
 function resetAndLoad() {
   state.page = 1;
   state.hasMore = true;
+  // Clear stale cards right away for a search so the "Searching..." line sits under
+  // the page header instead of below a full grid of unrelated results.
+  if (state.isGlobalSearch && container) container.innerHTML = "";
   if (loading) {
-    loading.textContent = "Loading…";
+    loading.textContent = state.isGlobalSearch && state.currentQuery
+      ? `Searching for "${state.currentQuery}"…`
+      : "Loading…";
     loading.style.display = "block";
   }
   loadContent({ page: 1, replace: true });
