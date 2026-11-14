@@ -1723,3 +1723,8 @@ html[data-theme="light"] .dynamic-bg {
   .search-dropdown { transform: none; transition: opacity .01s, visibility .01s; }
   .icon-btn:hover, .pill-btn:hover { transform: none; }
 }
+
+/* Light theme: the pastel dropdown badge text was 2.3:1 on the light list; darken to >= 4.5:1. */
+html[data-theme="light"] .sdb--movie { color: #6d28d9; }
+html[data-theme="light"] .sdb--tv    { color: #047857; }
+html[data-theme="light"] .sdb--anime { color: #b91c1c; }
