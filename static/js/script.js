@@ -216,6 +216,7 @@ function updateHeader() {
 // ---- 3D Tilt effect ----
 
 function addTiltEffect(card) {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   card.addEventListener("mousemove", function (e) {
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;

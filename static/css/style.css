@@ -1713,3 +1713,13 @@ html[data-theme="light"] .dynamic-bg {
 .show-more-btn { min-height: 44px; }
 /* Brand link on every page that uses it was 42px. */
 .nav-brand-link { min-height: 44px; }
+
+/* ─── Reduced motion ─────────────────────────────────────────────────
+   The site had no prefers-reduced-motion handling (smooth scroll, hover lifts, modal and
+   dropdown entrance animations). Keep state changes (colour, outline), drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .modal, .modal-overlay, .search-dropdown, .search-dropdown-item { animation: none !important; }
+  .search-dropdown { transform: none; transition: opacity .01s, visibility .01s; }
+  .icon-btn:hover, .pill-btn:hover { transform: none; }
+}
