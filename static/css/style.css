@@ -738,6 +738,33 @@ a {
   .card-sub   { font-size: 0.82rem; }
 }
 
+/* ─── Discover navbar on phones and small tablets (<= 900px) ─────────
+   The stacked header is 220-250px tall, so it scrolls away with the page instead of
+   sticking. position:relative (not static) keeps the z-index, so the search dropdown
+   still paints above the cards. The category strip used `justify-content:center`
+   while overflowing, which pushed "Discover" off the left edge where scrolling cannot
+   reach it; start-align it. */
+@media (max-width: 900px) {
+  .navbar--discover { position: relative; }
+  .navbar--discover .nav-tabs { justify-content: flex-start; }
+}
+/* Phones: fit all four content-type tabs and wrap the category links, so nothing
+   hides behind a scroll strip (For You and Now Playing used to sit offscreen). */
+@media (max-width: 600px) {
+  .navbar--discover .content-type-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+  }
+  .navbar--discover .content-type-btn { padding: 0 4px; font-size: 13px; }
+  .navbar--discover .nav-tabs { flex-wrap: wrap; overflow: visible; white-space: normal; gap: 4px 6px; }
+  .navbar--discover .nav-link { padding: 8px 12px; }
+}
+@media (max-width: 380px) {
+  .navbar--discover .content-type-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ─── 480px (phone portrait) ──────────────────────── */
 @media (max-width: 480px) {
   .navbar--discover { padding: 10px 12px; gap: 6px; }
