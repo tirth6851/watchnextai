@@ -1707,3 +1707,9 @@ html[data-theme="light"] .dynamic-bg {
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* Person page: "Read more" and "Show more" were 17px and 35px tall. */
+#bioToggle { min-height: 44px; padding: .5rem 0; }
+.show-more-btn { min-height: 44px; }
+/* Brand link on every page that uses it was 42px. */
+.nav-brand-link { min-height: 44px; }
