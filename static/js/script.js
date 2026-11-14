@@ -548,6 +548,7 @@ function runServerSearch() {
   state.currentQuery = q;
   state.isGlobalSearch = q.length > 0;
   updateHeader();
+  syncGenreBar();
   // Show all content-type tabs as inactive during global search
   if (state.isGlobalSearch) {
     document.querySelectorAll(".content-type-btn").forEach((btn) => btn.classList.remove("active"));
@@ -571,6 +572,7 @@ function handleCategoryClick(event) {
 
   setActiveCategoryButton(state.currentCategory);
   updateHeader();
+  syncGenreBar();
   resetAndLoad();
 }
 
@@ -601,8 +603,24 @@ async function loadGenreBar(type) {
       chip.onclick = () => selectGenre(g.id);
       bar.appendChild(chip);
     });
-    bar.style.display = "flex";
+    // A global search can start while the genres are loading; keep the bar hidden then.
+    bar.style.display = state.isGlobalSearch ? "none" : "flex";
   } catch {}
+}
+
+// Genre chips filter one content type, so they do nothing during a cross-type search.
+// Hide them while a global search is active and bring them back when it ends.
+function syncGenreBar() {
+  const bar = document.getElementById("genreBar");
+  if (!bar) return;
+  const type = state.currentContentType;
+  if (state.isGlobalSearch || (type !== "movies" && type !== "tv")) {
+    bar.style.display = "none";
+  } else if (bar.children.length) {
+    bar.style.display = "flex";
+  } else {
+    loadGenreBar(type);
+  }
 }
 
 function selectGenre(genreId) {
