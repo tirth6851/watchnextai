@@ -1678,3 +1678,32 @@ html[data-theme="light"] .dynamic-bg {
 .person-card-rating { color: #f59e0b; font-size: .65rem; font-weight: 700; }
 .show-more-btn { display: block; margin: 1.5rem auto 0; padding: .6rem 2rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
 .show-more-btn:hover { opacity: .85; }
+
+/* ─── Home nav fit and small text-link tap targets ───────────────────
+   The four home links (Home, Movies, TV Shows, Anime) needed ~373px, so "Anime" sat
+   behind a scroll strip on phones. Tighten them so all four fit at 320px and up.
+   "See all" and footer links were 18-19px tall; give them a 44px hit area. */
+@media (max-width: 900px) {
+  /* 129px of two-row header should not stay pinned on a phone held sideways. */
+  .navbar--home { position: relative; }
+}
+@media (max-width: 480px) {
+  .navbar--home .nav-tabs { gap: 2px; padding-inline: 2px; }
+  .navbar--home .nav-link { padding: 8px 10px; }
+}
+@media (max-width: 380px) {
+  .navbar--home .nav-link { padding: 8px 7px; font-size: 0.88rem; }
+}
+.home-section__link,
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.footer-links a { padding-inline: 6px; }
+.footer-links a:focus-visible,
+.home-section__link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
