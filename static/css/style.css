@@ -1518,7 +1518,8 @@ html[data-theme="light"] .dynamic-bg {
 .search-wrapper { position: relative; }
 .search-dropdown {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-  background: var(--card); border: 1px solid var(--border);
+  /* --card is 6% white in dark mode, so results and the page header showed through. */
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg)); border: 1px solid var(--border);
   border-radius: .9rem; box-shadow: 0 12px 40px rgba(0,0,0,.55);
   z-index: 9999; overflow: hidden;
   opacity: 0; visibility: hidden;

@@ -544,6 +544,11 @@ function handleSearchInput(event) {
 }
 
 function runServerSearch() {
+  // Submitting cancels any pending autocomplete: a late response must not reopen the
+  // dropdown on top of the results (it also covered the category links).
+  clearTimeout(_acTimer);
+  _acSeq++;
+  hideDropdown();
   const q = (searchInput?.value || "").trim();
   state.currentQuery = q;
   state.isGlobalSearch = q.length > 0;
@@ -870,6 +875,7 @@ const handleScroll = throttle(() => {
 
 const searchDropdown = document.getElementById("searchDropdown");
 let _acTimer = null;
+let _acSeq = 0; // bumps on every autocomplete request and on submit, so late responses are ignored
 
 function hideDropdown() {
   if (searchDropdown) searchDropdown.classList.remove("open");
@@ -883,10 +889,12 @@ function useSpellSuggestion(title) {
 
 async function triggerAutocomplete(query) {
   if (!query || query.length < 2) { hideDropdown(); return; }
+  const seq = ++_acSeq;
   try {
     const res = await fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`);
     if (!res.ok) return;
     const { results = [] } = await res.json();
+    if (seq !== _acSeq) return; // the user submitted or typed again while this was in flight
     showDropdown(results, query);
   } catch {}
 }
