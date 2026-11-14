@@ -1728,3 +1728,14 @@ html[data-theme="light"] .dynamic-bg {
 html[data-theme="light"] .sdb--movie { color: #6d28d9; }
 html[data-theme="light"] .sdb--tv    { color: #047857; }
 html[data-theme="light"] .sdb--anime { color: #b91c1c; }
+
+/* ─── Accent as text colour ──────────────────────────────────────────
+   --accent (#7c3aed dark, #a78bfa light) is a fill colour: as small text it measured
+   2.7-3.0:1 on dark and 2.1-2.6:1 on light. This text-only token clears 4.5:1 on both
+   themes; fills keep using --accent. */
+:root { --accent-text: #a78bfa; }
+html[data-theme="light"] { --accent-text: #6d28d9; }
+.home-section__link,
+.footer-links a,
+.card-genre-tag { color: var(--accent-text); }
+.footer-links a:hover { color: var(--fg); }
