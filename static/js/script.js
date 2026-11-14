@@ -216,6 +216,7 @@ function updateHeader() {
 // ---- 3D Tilt effect ----
 
 function addTiltEffect(card) {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   card.addEventListener("mousemove", function (e) {
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -544,10 +545,16 @@ function handleSearchInput(event) {
 }
 
 function runServerSearch() {
+  // Submitting cancels any pending autocomplete: a late response must not reopen the
+  // dropdown on top of the results (it also covered the category links).
+  clearTimeout(_acTimer);
+  _acSeq++;
+  hideDropdown();
   const q = (searchInput?.value || "").trim();
   state.currentQuery = q;
   state.isGlobalSearch = q.length > 0;
   updateHeader();
+  syncGenreBar();
   // Show all content-type tabs as inactive during global search
   if (state.isGlobalSearch) {
     document.querySelectorAll(".content-type-btn").forEach((btn) => btn.classList.remove("active"));
@@ -571,6 +578,7 @@ function handleCategoryClick(event) {
 
   setActiveCategoryButton(state.currentCategory);
   updateHeader();
+  syncGenreBar();
   resetAndLoad();
 }
 
@@ -601,8 +609,24 @@ async function loadGenreBar(type) {
       chip.onclick = () => selectGenre(g.id);
       bar.appendChild(chip);
     });
-    bar.style.display = "flex";
+    // A global search can start while the genres are loading; keep the bar hidden then.
+    bar.style.display = state.isGlobalSearch ? "none" : "flex";
   } catch {}
+}
+
+// Genre chips filter one content type, so they do nothing during a cross-type search.
+// Hide them while a global search is active and bring them back when it ends.
+function syncGenreBar() {
+  const bar = document.getElementById("genreBar");
+  if (!bar) return;
+  const type = state.currentContentType;
+  if (state.isGlobalSearch || (type !== "movies" && type !== "tv")) {
+    bar.style.display = "none";
+  } else if (bar.children.length) {
+    bar.style.display = "flex";
+  } else {
+    loadGenreBar(type);
+  }
 }
 
 function selectGenre(genreId) {
@@ -852,6 +876,7 @@ const handleScroll = throttle(() => {
 
 const searchDropdown = document.getElementById("searchDropdown");
 let _acTimer = null;
+let _acSeq = 0; // bumps on every autocomplete request and on submit, so late responses are ignored
 
 function hideDropdown() {
   if (searchDropdown) searchDropdown.classList.remove("open");
@@ -865,10 +890,12 @@ function useSpellSuggestion(title) {
 
 async function triggerAutocomplete(query) {
   if (!query || query.length < 2) { hideDropdown(); return; }
+  const seq = ++_acSeq;
   try {
     const res = await fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`);
     if (!res.ok) return;
     const { results = [] } = await res.json();
+    if (seq !== _acSeq) return; // the user submitted or typed again while this was in flight
     showDropdown(results, query);
   } catch {}
 }

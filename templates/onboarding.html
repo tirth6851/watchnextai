@@ -103,6 +103,9 @@
             transition: all .15s;
         }
         .ob-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        /* 44px tap targets */
+        .ob-tab { min-height: 44px; display: inline-flex; align-items: center; }
+        .ob-btn { min-height: 44px; }
 
         /* Auth loading / gate overlays */
         .ob-overlay {
@@ -141,6 +144,7 @@
             display: block; text-align: center; margin: .5rem auto 2rem;
             color: var(--fg-muted, #94a3b8); font-size: .82rem;
             background: none; border: none; cursor: pointer; text-decoration: underline;
+            min-height: 44px; padding: .5rem 1rem;
         }
 
         /* Drag hint */

@@ -738,6 +738,33 @@ a {
   .card-sub   { font-size: 0.82rem; }
 }
 
+/* ─── Discover navbar on phones and small tablets (<= 900px) ─────────
+   The stacked header is 220-250px tall, so it scrolls away with the page instead of
+   sticking. position:relative (not static) keeps the z-index, so the search dropdown
+   still paints above the cards. The category strip used `justify-content:center`
+   while overflowing, which pushed "Discover" off the left edge where scrolling cannot
+   reach it; start-align it. */
+@media (max-width: 900px) {
+  .navbar--discover { position: relative; }
+  .navbar--discover .nav-tabs { justify-content: flex-start; }
+}
+/* Phones: fit all four content-type tabs and wrap the category links, so nothing
+   hides behind a scroll strip (For You and Now Playing used to sit offscreen). */
+@media (max-width: 600px) {
+  .navbar--discover .content-type-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+  }
+  .navbar--discover .content-type-btn { padding: 0 4px; font-size: 13px; }
+  .navbar--discover .nav-tabs { flex-wrap: wrap; overflow: visible; white-space: normal; gap: 4px 6px; }
+  .navbar--discover .nav-link { padding: 8px 12px; }
+}
+@media (max-width: 380px) {
+  .navbar--discover .content-type-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ─── 480px (phone portrait) ──────────────────────── */
 @media (max-width: 480px) {
   .navbar--discover { padding: 10px 12px; gap: 6px; }
@@ -1491,7 +1518,8 @@ html[data-theme="light"] .dynamic-bg {
 .search-wrapper { position: relative; }
 .search-dropdown {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-  background: var(--card); border: 1px solid var(--border);
+  /* --card is 6% white in dark mode, so results and the page header showed through. */
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg)); border: 1px solid var(--border);
   border-radius: .9rem; box-shadow: 0 12px 40px rgba(0,0,0,.55);
   z-index: 9999; overflow: hidden;
   opacity: 0; visibility: hidden;
@@ -1650,3 +1678,64 @@ html[data-theme="light"] .dynamic-bg {
 .person-card-rating { color: #f59e0b; font-size: .65rem; font-weight: 700; }
 .show-more-btn { display: block; margin: 1.5rem auto 0; padding: .6rem 2rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
 .show-more-btn:hover { opacity: .85; }
+
+/* ─── Home nav fit and small text-link tap targets ───────────────────
+   The four home links (Home, Movies, TV Shows, Anime) needed ~373px, so "Anime" sat
+   behind a scroll strip on phones. Tighten them so all four fit at 320px and up.
+   "See all" and footer links were 18-19px tall; give them a 44px hit area. */
+@media (max-width: 900px) {
+  /* 129px of two-row header should not stay pinned on a phone held sideways. */
+  .navbar--home { position: relative; }
+}
+@media (max-width: 480px) {
+  .navbar--home .nav-tabs { gap: 2px; padding-inline: 2px; }
+  .navbar--home .nav-link { padding: 8px 10px; }
+}
+@media (max-width: 380px) {
+  .navbar--home .nav-link { padding: 8px 7px; font-size: 0.88rem; }
+}
+.home-section__link,
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.footer-links a { padding-inline: 6px; }
+.footer-links a:focus-visible,
+.home-section__link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Person page: "Read more" and "Show more" were 17px and 35px tall. */
+#bioToggle { min-height: 44px; padding: .5rem 0; }
+.show-more-btn { min-height: 44px; }
+/* Brand link on every page that uses it was 42px. */
+.nav-brand-link { min-height: 44px; }
+
+/* ─── Reduced motion ─────────────────────────────────────────────────
+   The site had no prefers-reduced-motion handling (smooth scroll, hover lifts, modal and
+   dropdown entrance animations). Keep state changes (colour, outline), drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .modal, .modal-overlay, .search-dropdown, .search-dropdown-item { animation: none !important; }
+  .search-dropdown { transform: none; transition: opacity .01s, visibility .01s; }
+  .icon-btn:hover, .pill-btn:hover { transform: none; }
+}
+
+/* Light theme: the pastel dropdown badge text was 2.3:1 on the light list; darken to >= 4.5:1. */
+html[data-theme="light"] .sdb--movie { color: #6d28d9; }
+html[data-theme="light"] .sdb--tv    { color: #047857; }
+html[data-theme="light"] .sdb--anime { color: #b91c1c; }
+
+/* ─── Accent as text colour ──────────────────────────────────────────
+   --accent (#7c3aed dark, #a78bfa light) is a fill colour: as small text it measured
+   2.7-3.0:1 on dark and 2.1-2.6:1 on light. This text-only token clears 4.5:1 on both
+   themes; fills keep using --accent. */
+:root { --accent-text: #a78bfa; }
+html[data-theme="light"] { --accent-text: #6d28d9; }
+.home-section__link,
+.footer-links a,
+.card-genre-tag { color: var(--accent-text); }
+.footer-links a:hover { color: var(--fg); }
